@@ -9,6 +9,8 @@ import time
 
 import jsonschema
 
+from hal import Hal
+
 @dataclass
 class RunContextNode:
     event: Event
@@ -27,11 +29,11 @@ class RunContextNode:
 class RunContext:
     path: List[RunContextNode]
     root_dir: Path
-    mock: bool = False
+    hal: Optional[Hal]
 
     def create_child_context(self, event: Event, step_index: Optional[int] = None, iteration: Optional[int] = None) -> RunContext:
         child_node = RunContextNode(event)
-        child_context = RunContext(self.path.copy(), self.root_dir, self.mock)
+        child_context = RunContext(self.path.copy(), self.root_dir, self.hal)
 
         last_node = child_context.path[-1]
         if step_index is not None:
@@ -72,8 +74,11 @@ class ReactionCycle(Event):
             for step_index, event in enumerate(self.events):
                 event.run(context.create_child_context(event, step_index, iteration))
 
-            # TODO: Talk to the HAL to do the cleaving
-            pass
+            if not context.hal:
+                print("Cleaving skipped -- `mock = True`\n")
+                return
+            else:
+                context.hal.cleave(self.cleaving)
 
 @dataclass
 class Group(Event):
@@ -88,12 +93,16 @@ class Group(Event):
 
 @dataclass
 class ImageSequence(Event):
-    ImageSequence_args: Dict
+    imaging_args: Dict
 
     def run(self, context: RunContext):
         super().run(context)
-        # TODO: Talk to the HAL to capture the image sequence
-        pass
+
+        if not context.hal:
+            print("Imaging skipped -- `mock = True`\n")
+            return
+        else:
+            context.hal.run_image_sequence(self.imaging_args)
 
 @dataclass
 class Wait(Event):
@@ -101,11 +110,14 @@ class Wait(Event):
 
     def run(self, context: RunContext):
         super().run(context)
-        if not context.mock:
-            print(f"Waiting {self.duration_ms} ms\n")
-            time.sleep(self.duration_ms / 1000)
-        else:
-            print(f"{self.duration_ms} ms wait skipped -- `mock = True`\n")
+        print(f"Waiting {self.duration_ms} ms")
+
+        if not context.hal:
+            print(f"Wait skipped -- `mock = True`\n")
+            return
+
+        time.sleep(self.duration_ms / 1000)
+        print()
 
 SEQUENCING_PROTOCOL_SCHEMA_PATH = "sequencing_protocol_schema.json"
 with open(SEQUENCING_PROTOCOL_SCHEMA_PATH) as schema_file:
@@ -159,6 +171,9 @@ if __name__ == "__main__":
     protocol = load_protocol_json(protocol_json)
 
     # Connect to the HAL
-    # TODO
+    if not args.mock:
+        hal = Hal(args.hal)
+    else:
+        hal = None
 
-    protocol.run(RunContext([RunContextNode(protocol)], Path(args.output_directory), args.mock))
+    protocol.run(RunContext([RunContextNode(protocol)], Path(args.output_directory), hal))

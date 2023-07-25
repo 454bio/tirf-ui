@@ -136,8 +136,8 @@
             "title": "Reaction Cycle",
             "type": "object",
             "properties": {
-                "times_to_run": {
-                    "title": "Times to run",
+                "iterations": {
+                    "title": "Iterations",
                     "type": "integer",
                     "minimum": 1
                 },
@@ -182,8 +182,8 @@
             "title": "Group",
             "type": "object",
             "properties": {
-                "times_to_run": {
-                    "title": "Times to run",
+                "iterations": {
+                    "title": "Iterations",
                     "type": "integer",
                     "minimum": 1
                 },

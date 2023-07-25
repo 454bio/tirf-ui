@@ -2,13 +2,13 @@
     "label": "Whole Experiment",
     "event_type": "Group",
     "Group_args": {
-        "times_to_run": 1,
+        "iterations": 1,
         "events": [
             {
                 "label": "Reaction Cycle",
                 "event_type": "ReactionCycle",
                 "ReactionCycle_args": {
-                    "times_to_run": 12,
+                    "iterations": 12,
                     "events": [
                         {
                             "label": "Start of Incorporation Image",

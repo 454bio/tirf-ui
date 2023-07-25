@@ -17,12 +17,12 @@ class Event:
 class ReactionCycle(Event):
     events: Iterable[Event]
     cleaving: Dict
-    times_to_run: int = 1
+    iterations: int = 1
 
 @dataclass
 class Group(Event):
     events: Iterable[Event]
-    times_to_run: int = 1
+    iterations: int = 1
 
 @dataclass
 class ImageSequence(Event):
@@ -51,13 +51,13 @@ def load_protocol_json(protocol_json: Dict) -> Event:
             label,
             map(load_protocol_json, args["events"]),
             args["cleaving"],
-            args["times_to_run"])
+            args["iterations"])
     elif event_type == "Group":
         args = protocol_json["Group_args"]
         return Group(
             label,
             map(load_protocol_json, args["events"]),
-            args["times_to_run"])
+            args["iterations"])
     elif event_type == "ImageSequence":
         return ImageSequence(label, protocol_json["ImageSequence_args"])
     elif event_type == "Wait":

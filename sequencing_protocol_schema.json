@@ -1,0 +1,301 @@
+{
+    "title": "Sequencing Protocol",
+    "$ref": "#/definitions/Event_def",
+    "definitions": {
+        "Event_def": {
+            "title": "Event",
+            "type": "object",
+            "required": [
+                "label",
+                "event_type"
+            ],
+            "properties": {
+                "label": {
+                    "title": "Label",
+                    "type": "string"
+                },
+                "event_type": {
+                    "title": "Event type",
+                    "type": "string",
+                    "enum": [
+                        "ReactionCycle",
+                        "Group",
+                        "ImageSequence",
+                        "Wait"
+                    ]
+                },
+                "ReactionCycle_args": {
+                    "$ref": "#/definitions/ReactionCycle_args_def",
+                    "options": {
+                        "dependencies": {
+                            "event_type": "ReactionCycle"
+                        }
+                    }
+                },
+                "Group_args": {
+                    "$ref": "#/definitions/Group_args_def",
+                    "options": {
+                        "dependencies": {
+                            "event_type": "Group"
+                        }
+                    }
+                },
+                "ImageSequence_args": {
+                    "$ref": "#/definitions/ImageSequence_args_def",
+                    "options": {
+                        "dependencies": {
+                            "event_type": "ImageSequence"
+                        }
+                    }
+                },
+                "Wait_args": {
+                    "$ref": "#/definitions/Wait_args_def",
+                    "options": {
+                        "dependencies": {
+                            "event_type": "Wait"
+                        }
+                    }
+                }
+            },
+            "dependentSchemas": {
+                "event_type": {
+                    "oneOf": [
+                        {
+                            "properties": {
+                                "event_type": {
+                                    "pattern": "ReactionCycle"
+                                },
+                                "required": {
+                                    "ReactionCycle_args": {
+                                        "$ref": "#/definitions/ReactionCycle_args_def",
+                                        "options": {
+                                            "dependencies": {
+                                                "event_type": "ReactionCycle"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "properties": {
+                                "event_type": {
+                                    "pattern": "Group"
+                                },
+                                "required": {
+                                    "Group_args": {
+                                        "$ref": "#/definitions/Group_args_def",
+                                        "options": {
+                                            "dependencies": {
+                                                "event_type": "Group"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "properties": {
+                                "event_type": {
+                                    "pattern": "ImageSequence"
+                                },
+                                "required": {
+                                    "ImageSequence_args": {
+                                        "$ref": "#/definitions/ImageSequence_args_def",
+                                        "options": {
+                                            "dependencies": {
+                                                "event_type": "ImageSequence"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "properties": {
+                                "event_type": {
+                                    "pattern": "Wait"
+                                },
+                                "required": {
+                                    "Wait_args": {
+                                        "$ref": "#/definitions/Wait_args_def",
+                                        "options": {
+                                            "dependencies": {
+                                                "event_type": "Wait"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "ReactionCycle_args_def": {
+            "title": "Reaction Cycle",
+            "type": "object",
+            "properties": {
+                "times_to_run": {
+                    "title": "Times to run",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "events": {
+                    "title": "Events",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Event_def"
+                    }
+                },
+                "cleaving": {
+                    "title": "Cleaving",
+                    "type": "object",
+                    "properties": {
+                        "schema_version": {
+                            "title": "HAL schema version",
+                            "type": "integer"
+                        },
+                        "capture_period_ms": {
+                            "title": "Capture period (ms)",
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "cleaving_duration_ms": {
+                            "title": "Cleaving duration (ms)",
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    },
+                    "required": [
+                        "schema_version",
+                        "cleaving_duration_ms"
+                    ]
+                }
+            },
+            "required": [
+                "events",
+                "cleaving"
+            ]
+        },
+        "Group_args_def": {
+            "title": "Group",
+            "type": "object",
+            "properties": {
+                "times_to_run": {
+                    "title": "Times to run",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "events": {
+                    "title": "Events",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Event_def"
+                    }
+                }
+            },
+            "required": [
+                "events"
+            ]
+        },
+        "ImageSequence_args_def": {
+            "title": "Image Sequence",
+            "type": "object",
+            "properties": {
+                "schema_version": {
+                    "title": "HAL schema version",
+                    "type": "integer"
+                },
+                "images": {
+                    "title": "Images",
+                    "type": "array",
+                    "format": "table",
+                    "items": {
+                        "$ref": "#/definitions/ImageParameters_def"
+                    }
+                }
+            },
+            "required": [
+                "schema_version",
+                "images"
+            ]
+        },
+        "ImageParameters_def": {
+            "title": "Image",
+            "type": "object",
+            "properties": {
+                "label": {
+                    "title": "Label",
+                    "type": "string"
+                },
+                "flashes": {
+                    "title": "Flashes",
+                    "type": "array",
+                    "format": "table",
+                    "items": {
+                        "$ref": "#/definitions/FlashParameters_def"
+                    }
+                },
+                "filter": {
+                    "$ref": "#/definitions/LensFilter_def"
+                }
+            },
+            "required": [
+                "label",
+                "flashes",
+                "filter"
+            ]
+        },
+        "FlashParameters_def": {
+            "title": "Flash",
+            "type": "object",
+            "properties": {
+                "led": {
+                    "$ref": "#/definitions/GpioLed_def"
+                },
+                "duration_ms": {
+                    "title": "Duration (ms)",
+                    "type": "integer",
+                    "minimum": 0
+                }
+            },
+            "required": [
+                "led",
+                "duration_ms"
+            ]
+        },
+        "GpioLed_def": {
+            "title": "LED",
+            "type": "string",
+            "enum": [
+                "red",
+                "orange",
+                "green",
+                "blue"
+            ]
+        },
+        "LensFilter_def": {
+            "title": "Lens Filter",
+            "type": "string",
+            "enum": [
+                "no_filter",
+                "red",
+                "orange",
+                "green",
+                "blue"
+            ]
+        },
+        "Wait_args_def": {
+            "title": "Wait",
+            "type": "object",
+            "properties": {
+                "duration_ms": {
+                    "title": "Duration (ms)",
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        }
+    }
+}

@@ -49,7 +49,6 @@ class RunContext:
     
     def output_dir(self) -> Path:
         # TODO: Define directory structure -- might not want everything in its own directory
-        # TODO: Ensure this is available
         return self.root_dir / str(self)
 
 @dataclass
@@ -76,9 +75,16 @@ class ReactionCycle(Event):
 
             if not context.hal:
                 print("Cleaving skipped -- `mock = True`\n")
-                return
             else:
-                context.hal.cleave(self.cleaving)
+                output_dir = context.output_dir()
+                output_dir.mkdir(parents=True)
+                context.hal.run_command({
+                    "command": "cleave",
+                    "args": {
+                        "cleave_args": self.cleaving,
+                        "output_dir": str(output_dir)
+                    }
+                })
 
 @dataclass
 class Group(Event):
@@ -100,9 +106,19 @@ class ImageSequence(Event):
 
         if not context.hal:
             print("Imaging skipped -- `mock = True`\n")
-            return
         else:
-            context.hal.run_image_sequence(self.imaging_args)
+            output_dir = context.output_dir()
+            output_dir.mkdir(parents=True)
+            context.hal.run_command({
+                "command": "run_image_sequence",
+                "args": {
+                    "sequence": {
+                        "label": self.label,
+                        **self.imaging_args
+                    },
+                    "output_dir": str(output_dir)
+                }
+            })
 
 @dataclass
 class Wait(Event):

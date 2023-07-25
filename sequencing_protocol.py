@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from dataclasses import dataclass
-from typing import Dict, Iterable
+from typing import Dict, List, Optional
 import json
 
 import jsonschema
@@ -49,14 +49,16 @@ def load_protocol_json(protocol_json: Dict) -> Event:
         args = protocol_json["ReactionCycle_args"]
         return ReactionCycle(
             label,
-            map(load_protocol_json, args["events"]),
+            # Conversion to `list` needed so that we can iterate through this more than once
+            list(map(load_protocol_json, args["events"])),
             args["cleaving"],
             args["iterations"])
     elif event_type == "Group":
         args = protocol_json["Group_args"]
         return Group(
             label,
-            map(load_protocol_json, args["events"]),
+            # Conversion to `list` needed so that we can iterate through this more than once
+            list(map(load_protocol_json, args["events"])),
             args["iterations"])
     elif event_type == "ImageSequence":
         return ImageSequence(label, protocol_json["ImageSequence_args"])

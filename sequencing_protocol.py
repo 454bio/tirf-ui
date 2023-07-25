@@ -57,7 +57,8 @@ class Event:
     def run(self, context: RunContext):
         # TODO: Use a logging library
         print(f">>> Running {type(self).__name__} step")
-        print(f"Path: {context}\nLabel: {self.label}\n")
+        print(f"Path: {context}\nLabel: {self.label}")
+        print(f"Time: {time.asctime(time.localtime(time.time()))}\n")
 
 @dataclass
 class ReactionCycle(Event):

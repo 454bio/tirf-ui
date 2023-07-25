@@ -1,36 +1,108 @@
+from __future__ import annotations
+
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 import json
+import time
 
 import jsonschema
+
+@dataclass
+class RunContextNode:
+    event: Event
+    step_index: Optional[int] = None
+    iteration: Optional[int] = None
+
+    def __str__(self) -> str:
+        output = f"{type(self.event).__name__}"
+        if self.iteration is not None:
+            output += f"-iteration_{self.iteration}"
+        if self.step_index is not None:
+            output += f"-step_{self.step_index}"
+        return output
+
+@dataclass
+class RunContext:
+    path: List[RunContextNode]
+    mock: bool = False
+
+    def create_child_context(self, event: Event, step_index: Optional[int] = None, iteration: Optional[int] = None) -> RunContext:
+        child_node = RunContextNode(event)
+        child_context = RunContext(self.path.copy(), self.mock)
+
+        last_node = child_context.path[-1]
+        if step_index is not None:
+            last_node.step_index = step_index
+        if iteration is not None:
+            last_node.iteration = iteration
+        
+        child_context.path.append(child_node)
+        return child_context
+    
+    def __str__(self) -> str:
+        return "/".join(map(str, self.path))
+    
+    def output_dir(self) -> str:
+        # TODO: Define directory structure -- might not want everything in its own directory
+        # TODO: Ensure this is available
+        return str(self)
 
 @dataclass
 class Event:
     label: str
 
-    def run(self):
-        # Base `Event` doesn't do anything
-        raise NotImplementedError
+    def run(self, context: RunContext):
+        # TODO: Use a logging library
+        print(f">>> Running {type(self).__name__} step")
+        print(f"Path: {context}\nLabel: {self.label}\n")
 
 @dataclass
 class ReactionCycle(Event):
-    events: Iterable[Event]
+    events: List[Event]
     cleaving: Dict
     iterations: int = 1
 
+    def run(self, context: RunContext):
+        super().run(context)
+        for iteration in range(self.iterations):
+            for step_index, event in enumerate(self.events):
+                event.run(context.create_child_context(event, step_index, iteration))
+
+            # TODO: Talk to the HAL to do the cleaving
+            pass
+
 @dataclass
 class Group(Event):
-    events: Iterable[Event]
+    events: List[Event]
     iterations: int = 1
+
+    def run(self, context: RunContext):
+        super().run(context)
+        for iteration in range(self.iterations):
+            for step_index, event in enumerate(self.events):
+                event.run(context.create_child_context(event, step_index, iteration))
 
 @dataclass
 class ImageSequence(Event):
     ImageSequence_args: Dict
 
+    def run(self, context: RunContext):
+        super().run(context)
+        # TODO: Talk to the HAL to capture the image sequence
+        pass
+
 @dataclass
 class Wait(Event):
     duration_ms: int
+
+    def run(self, context: RunContext):
+        super().run(context)
+        if not context.mock:
+            print(f"Waiting {self.duration_ms} ms\n")
+            time.sleep(self.duration_ms / 1000)
+        else:
+            print(f"{self.duration_ms} ms wait skipped -- `mock = True`\n")
 
 SEQUENCING_PROTOCOL_SCHEMA_PATH = "sequencing_protocol_schema.json"
 with open(SEQUENCING_PROTOCOL_SCHEMA_PATH) as schema_file:
@@ -72,12 +144,10 @@ group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--hal", help="Path to HAL domain socket")
 group.add_argument("--mock", action="store_true")
 parser.add_argument("protocol", help="Path to the protocol file to run")
+parser.add_argument("output_directory", help="Where to save output files")
 
 if __name__ == "__main__":
     args = parser.parse_args()
-
-    # Connect to the HAL
-    # TODO
 
     # Load the protocol
     with open(args.protocol) as protocol_file:
@@ -85,4 +155,7 @@ if __name__ == "__main__":
     validate_protocol_json(protocol_json)
     protocol = load_protocol_json(protocol_json)
 
-    protocol.run()
+    # Connect to the HAL
+    # TODO
+
+    protocol.run(RunContext([RunContextNode(protocol)], args.mock))

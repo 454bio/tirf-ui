@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Optional
 import json
 import time
@@ -25,11 +26,12 @@ class RunContextNode:
 @dataclass
 class RunContext:
     path: List[RunContextNode]
+    root_dir: Path
     mock: bool = False
 
     def create_child_context(self, event: Event, step_index: Optional[int] = None, iteration: Optional[int] = None) -> RunContext:
         child_node = RunContextNode(event)
-        child_context = RunContext(self.path.copy(), self.mock)
+        child_context = RunContext(self.path.copy(), self.root_dir, self.mock)
 
         last_node = child_context.path[-1]
         if step_index is not None:
@@ -43,10 +45,10 @@ class RunContext:
     def __str__(self) -> str:
         return "/".join(map(str, self.path))
     
-    def output_dir(self) -> str:
+    def output_dir(self) -> Path:
         # TODO: Define directory structure -- might not want everything in its own directory
         # TODO: Ensure this is available
-        return str(self)
+        return self.root_dir / str(self)
 
 @dataclass
 class Event:
@@ -158,4 +160,4 @@ if __name__ == "__main__":
     # Connect to the HAL
     # TODO
 
-    protocol.run(RunContext([RunContextNode(protocol)], args.mock))
+    protocol.run(RunContext([RunContextNode(protocol)], Path(args.output_directory), args.mock))

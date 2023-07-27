@@ -11,7 +11,7 @@ from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, Q
 
 from sequencing_protocol import load_protocol_json, Event, RunContext, RunContextNode, Hal
 
-
+WINDOW_TITLE_BASE = "454 Sequencer"
 PROTOCOLS_DIR = "protocols"
 MARGIN_BETWEEN_EVENTS = 12
 
@@ -180,7 +180,7 @@ class SequencingUi(QMainWindow):
         self.setCentralWidget(mainWidget)
 
         self.setMinimumSize(550, 550)
-        self.setWindowTitle("454 Sequencer")
+        self.setWindowTitle(WINDOW_TITLE_BASE)
 
         self.stop()
         self.startButton.setEnabled(False)
@@ -219,6 +219,7 @@ class SequencingUi(QMainWindow):
         self.protocolThread.protocol = self.protocol
 
         self.startButton.setEnabled(True)
+        self.setWindowTitle(f"{Path(path).name} - {WINDOW_TITLE_BASE}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

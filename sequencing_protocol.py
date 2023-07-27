@@ -3,7 +3,7 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import json
 import time
 
@@ -157,7 +157,7 @@ with open(SEQUENCING_PROTOCOL_SCHEMA_PATH) as schema_file:
 def validate_protocol_json(protocol_json: Dict) -> None:
     jsonschema.validate(protocol_json, SEQUENCING_PROTOCOL_SCHEMA_JSON)
 
-def load_protocol_json(protocol_line: int, protocol_json: Dict) -> Event:
+def load_protocol_json(protocol_line: int, protocol_json: Dict) -> Tuple[Event, int]:
     # Assumes that `protocol_json` is valid. Make sure to call `validate_protocol_json` first.
     # Can't do this validation here because of the recursion.
     label = protocol_json["label"]
@@ -169,17 +169,19 @@ def load_protocol_json(protocol_line: int, protocol_json: Dict) -> Event:
         # Create the children, making sure to give them the correct line numbers.
         next_protocol_line = protocol_line + 1
         children = []
+        event_len = 1
         for event_json in args["events"]:
-            event = load_protocol_json(next_protocol_line, event_json)
-            next_protocol_line += len(event)
-            children.append(event)
+            child, child_len = load_protocol_json(next_protocol_line, event_json)
+            next_protocol_line += child_len
+            event_len += child_len
+            children.append(child)
 
         return ReactionCycle(
             label,
             protocol_line,
             children,
             args["cleaving"],
-            args["iterations"])
+            args["iterations"]), event_len
 
     elif event_type == "Group":
         args = protocol_json["Group_args"]
@@ -187,22 +189,24 @@ def load_protocol_json(protocol_line: int, protocol_json: Dict) -> Event:
         # Create the children, making sure to give them the correct line numbers.
         next_protocol_line = protocol_line + 1
         children = []
+        event_len = 1
         for event_json in args["events"]:
-            event = load_protocol_json(next_protocol_line, event_json)
-            next_protocol_line += len(event)
-            children.append(event)
+            child, child_len = load_protocol_json(next_protocol_line, event_json)
+            next_protocol_line += child_len
+            event_len += child_len
+            children.append(child)
 
         return Group(
             label,
             protocol_line,
             children,
-            args["iterations"])
+            args["iterations"]), event_len
 
     elif event_type == "ImageSequence":
-        return ImageSequence(label, protocol_line, protocol_json["ImageSequence_args"])
+        return ImageSequence(label, protocol_line, protocol_json["ImageSequence_args"]), 1
 
     elif event_type == "Wait":
-        return Wait(label, protocol_line, protocol_json["Wait_args"]["duration_ms"])
+        return Wait(label, protocol_line, protocol_json["Wait_args"]["duration_ms"]), 1
 
     else:
         raise ValueError(f"Unsupported type {event_type}")
@@ -221,7 +225,7 @@ if __name__ == "__main__":
     with open(args.protocol) as protocol_file:
         protocol_json = json.load(protocol_file)
     validate_protocol_json(protocol_json)
-    protocol = load_protocol_json(0, protocol_json)
+    protocol, _ = load_protocol_json(0, protocol_json)
 
     # Connect to the HAL
     if not args.mock:

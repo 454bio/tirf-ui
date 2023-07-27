@@ -19,6 +19,8 @@ MARGIN_BETWEEN_EVENTS = 12
 HAL_PATH: Optional[Path] = Path().home() / "454" / "socket"
 OUTPUT_DIR_ROOT = Path.home() / "454"/ "output"
 
+MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
+
 class ProtocolThread(QThread):
     finished = Signal()
     error = Signal(tuple)
@@ -29,10 +31,10 @@ class ProtocolThread(QThread):
         self.protocol: Optional[Event] = None
         self.hal: Optional[Hal] = None
 
+        # Create the HAL iff there's a socket we can connect to.
+        # Otherwise, run in mock mode.
         if HAL_PATH is not None and HAL_PATH.is_socket():
             self.hal = Hal(str(HAL_PATH))
-        else:
-            print(f"No HAL at {HAL_PATH}, running in mock mode")
 
     @Slot(None)
     def run(self):
@@ -225,4 +227,9 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     ui = SequencingUi()
     ui.show()
+
+    if HAL_PATH is None or not HAL_PATH.is_socket():
+        print(MOCK_WARNING_TEXT)
+        QErrorMessage.qtHandler().showMessage(MOCK_WARNING_TEXT)
+
     sys.exit(app.exec_())

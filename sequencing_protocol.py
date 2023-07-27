@@ -3,7 +3,7 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Dict, List, Optional, Tuple
+from typing import Callable, ClassVar, Dict, List, Optional, Tuple
 import json
 import time
 
@@ -58,13 +58,26 @@ class Event:
     protocol_line: int
     protocol_depth: int
 
+    def __post_init__(self):
+        # Event that is emitted when we start a new step.
+        # Initialized here to avoid exposing this in the constructor.
+        self.event_run_callback: Optional[Callable[[RunContext], None]] = None
+
     def run(self, context: RunContext):
         # TODO: Use a logging library
         print(f">>> Running {type(self).__name__} step")
         print(f"Line {self.protocol_line}, depth {self.protocol_depth}, path: {context}\nLabel: {self.label}")
         print(f"Time: {time.asctime(time.localtime(time.time()))}\n")
 
-        # TODO: Emit this context from the root Event so the viewer knows where we are
+        if not context.hal:
+            # Delay so we can actually see what's going on in a mock run
+            time.sleep(1)
+
+        # Notify the listener that we're running a new Event
+        # The listener is only registered on the root Event
+        callback = context.path[0].event.event_run_callback
+        if callback is not None:
+            callback(context)
 
     def __len__(self):
         return 1

@@ -1,17 +1,46 @@
 import json
 import sys
+import traceback
+from pathlib import Path
 from typing import List, Optional, Tuple
 
-from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog
+from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat
+from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog
 
-from sequencing_protocol import load_protocol_json, Event
+from sequencing_protocol import load_protocol_json, Event, RunContext, RunContextNode
 
 
 PROTOCOLS_DIR = "protocols"
 MARGIN_BETWEEN_EVENTS = 12
 
 # TODO: Configuration: HAL path, output directory
+
+class ProtocolThread(QThread):
+    finished = Signal()
+    error = Signal(tuple)
+    progress = Signal(RunContext)
+
+    def __init__(self):
+        super().__init__()
+        self.protocol: Optional[Event] = None
+
+    @Slot(None)
+    def run(self):
+        try:
+            # TODO: output dir and hal
+            self.protocol.event_run_callback = self.eventRunCallback
+            self.protocol.run(RunContext([RunContextNode(self.protocol)], Path("/tmp/foo"), None))
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.error.emit((exctype, value, traceback.format_exc()))
+        finally:
+            self.protocol.event_run_callback = None
+            self.finished.emit()
+
+    def eventRunCallback(self, context: RunContext):
+        self.progress.emit(context)
 
 class ProtocolViewer(QTextEdit):
     def __init__(self):
@@ -20,7 +49,7 @@ class ProtocolViewer(QTextEdit):
 
         self.eventTextBlocks: List[Tuple[QTextBlock, Optional[QTextBlock]]] = []
 
-    def attachProtocol(self, protocol: Event):
+    def loadProtocol(self, protocol: Event):
         eventFormat = QTextBlockFormat()
         eventFormat.setTopMargin(MARGIN_BETWEEN_EVENTS)
         cursor = QTextCursor(self.document())
@@ -42,15 +71,19 @@ class ProtocolViewer(QTextEdit):
 
             self.eventTextBlocks.append((eventBlock, detailsBlock))
 
-        # TODO: Register callbacks on the protocol to notify the viewer when it starts a new step
+    def progress(self, context: RunContext):
+        print("Received context")
+        # TODO: Display the context somehow
         # Can set a marker on the currently running block(s? maybe all of its parents too) with format.setMarker
         # Also need to mention iterations for each event that supports them
+        pass
 
 class SequencingUi(QMainWindow):
     def __init__(self):
         super().__init__()
 
         # Create the main elements...
+        self.protocolThread = ProtocolThread()
         self.protocolViewer = ProtocolViewer()
         self.startButton = QPushButton()
         self.stopButton = QPushButton()
@@ -64,6 +97,9 @@ class SequencingUi(QMainWindow):
         self.stopButton.setText("Stop")
 
         # ... make them do stuff...
+        self.protocolThread.progress.connect(self.protocolViewer.progress)
+        self.protocolThread.finished.connect(self.finished)
+        # TODO: error
         self.openAction.triggered.connect(self.open)
         self.startButton.clicked.connect(self.start)
         self.stopButton.clicked.connect(self.stop)
@@ -94,15 +130,15 @@ class SequencingUi(QMainWindow):
 
     def stop(self):
         self.stopButton.setEnabled(False)
+        self.protocolThread.terminate()
 
-        # TODO: If necessary, stop the currently running protocol
-
+    def finished(self):
         self.startButton.setEnabled(True)
 
     def start(self):
-        # TODO: Run the protocol
-        # Do this in a new thread because it will block for a long time
-        pass
+        self.stopButton.setEnabled(True)
+        self.startButton.setEnabled(False)
+        self.protocolThread.start()
 
     def open(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open sequencing protocol", PROTOCOLS_DIR, "Sequencing protocols (*.454sp.json)")
@@ -113,7 +149,9 @@ class SequencingUi(QMainWindow):
         with open(path) as protocol_file:
             self.protocol, _ = load_protocol_json(json.load(protocol_file))
 
-        self.protocolViewer.attachProtocol(self.protocol)
+        self.protocolViewer.loadProtocol(self.protocol)
+        self.protocolThread.protocol = self.protocol
+        self.startButton.setEnabled(True)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

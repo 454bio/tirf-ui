@@ -69,15 +69,15 @@ class Event:
         print(f"Line {self.protocol_line}, depth {self.protocol_depth}, path: {context}\nLabel: {self.label}")
         print(f"Time: {time.asctime(time.localtime(time.time()))}\n")
 
-        if not context.hal:
-            # Delay so we can actually see what's going on in a mock run
-            time.sleep(1)
-
         # Notify the listener that we're running a new Event
         # The listener is only registered on the root Event
         callback = context.path[0].event.event_run_callback
         if callback is not None:
             callback(context)
+
+        if not context.hal:
+            # Delay so we can actually see what's going on in a mock run
+            time.sleep(1)
 
     def __len__(self):
         return 1

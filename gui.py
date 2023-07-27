@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from PySide2.QtCore import Signal, Slot, QThread
-from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat
+from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont, QBrush
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog
 
 from sequencing_protocol import load_protocol_json, Event, RunContext, RunContextNode
@@ -48,35 +48,73 @@ class ProtocolViewer(QTextEdit):
         self.setReadOnly(True)
 
         self.eventTextBlocks: List[Tuple[QTextBlock, Optional[QTextBlock]]] = []
-
-    def loadProtocol(self, protocol: Event):
+        self.lastContext: Optional[RunContext] = None
+    
+    @staticmethod
+    def makeBlockFormats(depth: int, active: bool = False) -> Tuple[QTextBlockFormat, QTextBlockFormat]:
         eventFormat = QTextBlockFormat()
         eventFormat.setTopMargin(MARGIN_BETWEEN_EVENTS)
+        eventFormat.setIndent(depth)
+        # if active:
+        #     eventFormat.setBackground(QBrush())
+
+        detailsFormat = QTextBlockFormat()
+        detailsFormat.setIndent(depth)
+
+        return eventFormat, detailsFormat
+
+    @staticmethod
+    def makeCharFormats(active: bool = False) -> Tuple[QTextCharFormat, QTextCharFormat]:
+        eventFormat = QTextCharFormat()
+        if active:
+            eventFormat.setFontWeight(QFont.Bold)
+
+        detailsFormat = QTextCharFormat()
+
+        return eventFormat, detailsFormat
+
+    def loadProtocol(self, protocol: Event):
         cursor = QTextCursor(self.document())
         self.eventTextBlocks = []
         for event in protocol:
-            eventFormat.setIndent(event.protocol_depth)
-            cursor.insertBlock(eventFormat)
+            eventBlockFormat, detailsBlockFormat = self.makeBlockFormats(event.protocol_depth)
+            eventCharFormat, detailsCharFormat = self.makeCharFormats()
+
+            cursor.insertBlock(eventBlockFormat)
+            cursor.setCharFormat(eventCharFormat)
             cursor.insertText(f"({event.readable_type}) {event.label}")
             eventBlock = cursor.block()
 
             detailsBlock: Optional[QTextBlock] = None
             details = event.gui_details()
             if details:
-                detailsFormat = QTextBlockFormat()
-                detailsFormat.setIndent(event.protocol_depth)
-                cursor.insertBlock(detailsFormat)
+                cursor.insertBlock(detailsBlockFormat)
+                cursor.setCharFormat(detailsCharFormat)
                 cursor.insertText(details)
                 detailsBlock = cursor.block()
 
             self.eventTextBlocks.append((eventBlock, detailsBlock))
 
+    def formatLine(self, context: RunContext, active):
+        event = context.path[-1].event
+        lines = self.eventTextBlocks[event.protocol_line]
+        blockFormats = self.makeBlockFormats(event.protocol_depth, active)
+        charFormats = self.makeCharFormats(active)
+        for line, blockFormat, charFormat in zip(lines, blockFormats, charFormats):
+            if line is not None:
+                cursor = QTextCursor(line)
+                cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                cursor.setCharFormat(charFormat)
+                cursor.setBlockFormat(blockFormat)
+        # TODO: Marker for the active parents as well?
+        # TODO: Mention iterations for each event that supports them
+
     def progress(self, context: RunContext):
-        print("Received context")
-        # TODO: Display the context somehow
-        # Can set a marker on the currently running block(s? maybe all of its parents too) with format.setMarker
-        # Also need to mention iterations for each event that supports them
-        pass
+        if self.lastContext is not None:
+            self.formatLine(self.lastContext, active=False)
+
+        self.formatLine(context, active=True)
+        self.lastContext = context
 
 class SequencingUi(QMainWindow):
     def __init__(self):
@@ -99,7 +137,7 @@ class SequencingUi(QMainWindow):
         # ... make them do stuff...
         self.protocolThread.progress.connect(self.protocolViewer.progress)
         self.protocolThread.finished.connect(self.finished)
-        # TODO: error
+        # TODO: self.protocolThread.error
         self.openAction.triggered.connect(self.open)
         self.startButton.clicked.connect(self.start)
         self.stopButton.clicked.connect(self.stop)
@@ -133,11 +171,14 @@ class SequencingUi(QMainWindow):
         self.protocolThread.terminate()
 
     def finished(self):
+        self.stopButton.setEnabled(False)
         self.startButton.setEnabled(True)
+        self.openAction.setEnabled(True)
 
     def start(self):
         self.stopButton.setEnabled(True)
         self.startButton.setEnabled(False)
+        self.openAction.setEnabled(False)
         self.protocolThread.start()
 
     def open(self):
@@ -149,8 +190,10 @@ class SequencingUi(QMainWindow):
         with open(path) as protocol_file:
             self.protocol, _ = load_protocol_json(json.load(protocol_file))
 
+        self.protocolViewer.clear()
         self.protocolViewer.loadProtocol(self.protocol)
         self.protocolThread.protocol = self.protocol
+
         self.startButton.setEnabled(True)
 
 if __name__ == "__main__":

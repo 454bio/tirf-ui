@@ -1,20 +1,23 @@
 import json
 import sys
 import traceback
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 from PySide2.QtCore import Signal, Slot, QThread
-from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont, QBrush
-from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog
+from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
+from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QDialog
 
-from sequencing_protocol import load_protocol_json, Event, RunContext, RunContextNode
+from sequencing_protocol import load_protocol_json, Event, RunContext, RunContextNode, Hal
 
 
 PROTOCOLS_DIR = "protocols"
 MARGIN_BETWEEN_EVENTS = 12
 
-# TODO: Configuration: HAL path, output directory
+# TODO: Make these configurable
+HAL_PATH: Optional[Path] = Path().home() / "454" / "socket"
+OUTPUT_DIR_ROOT = Path.home() / "454"/ "output"
 
 class ProtocolThread(QThread):
     finished = Signal()
@@ -24,13 +27,20 @@ class ProtocolThread(QThread):
     def __init__(self):
         super().__init__()
         self.protocol: Optional[Event] = None
+        self.hal: Optional[Hal] = None
+        self.output_dir = OUTPUT_DIR_ROOT / datetime.now().isoformat()
+
+        if HAL_PATH is not None and HAL_PATH.is_socket():
+            self.hal = Hal(str(HAL_PATH))
+        else:
+            print(f"No HAL at {HAL_PATH}, running in mock mode")
 
     @Slot(None)
     def run(self):
         try:
             # TODO: output dir and hal
             self.protocol.event_run_callback = self.eventRunCallback
-            self.protocol.run(RunContext([RunContextNode(self.protocol)], Path("/tmp/foo"), None))
+            self.protocol.run(RunContext([RunContextNode(self.protocol)], self.output_dir, self.hal))
         except:
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
@@ -126,7 +136,7 @@ class SequencingUi(QMainWindow):
         self.startButton = QPushButton()
         self.stopButton = QPushButton()
         self.openAction = QAction("&Open")
-        self.settingsAction = QAction("S&ettings")
+        # self.settingsAction = QAction("S&ettings")
 
         # TODO: Estimated total time and estimated time remaining -- status bar
 
@@ -139,6 +149,7 @@ class SequencingUi(QMainWindow):
         self.protocolThread.finished.connect(self.finished)
         # TODO: self.protocolThread.error
         self.openAction.triggered.connect(self.open)
+        # self.settingsAction.triggered.connect()
         self.startButton.clicked.connect(self.start)
         self.stopButton.clicked.connect(self.stop)
 
@@ -156,7 +167,7 @@ class SequencingUi(QMainWindow):
 
         fileMenu = self.menuBar().addMenu("&File")
         fileMenu.addAction(self.openAction)
-        fileMenu.addAction(self.settingsAction)
+        # fileMenu.addAction(self.settingsAction)
 
         self.setCentralWidget(mainWidget)
 

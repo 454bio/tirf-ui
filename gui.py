@@ -62,12 +62,10 @@ class ProtocolViewer(QTextEdit):
         self.lastContext: Optional[RunContext] = None
     
     @staticmethod
-    def makeBlockFormats(depth: int, active: bool = False) -> Tuple[QTextBlockFormat, QTextBlockFormat]:
+    def makeBlockFormats(depth: int) -> Tuple[QTextBlockFormat, QTextBlockFormat]:
         eventFormat = QTextBlockFormat()
         eventFormat.setTopMargin(MARGIN_BETWEEN_EVENTS)
         eventFormat.setIndent(depth)
-        # if active:
-        #     eventFormat.setBackground(QBrush())
 
         detailsFormat = QTextBlockFormat()
         detailsFormat.setIndent(depth)
@@ -75,10 +73,12 @@ class ProtocolViewer(QTextEdit):
         return eventFormat, detailsFormat
 
     @staticmethod
-    def makeCharFormats(active: bool = False) -> Tuple[QTextCharFormat, QTextCharFormat]:
+    def makeCharFormats(active: bool = False, on_path: bool = False) -> Tuple[QTextCharFormat, QTextCharFormat]:
         eventFormat = QTextCharFormat()
         if active:
             eventFormat.setFontWeight(QFont.Bold)
+        if on_path:
+            eventFormat.setFontUnderline(True)
 
         detailsFormat = QTextCharFormat()
 
@@ -98,27 +98,34 @@ class ProtocolViewer(QTextEdit):
 
             detailsBlock: Optional[QTextBlock] = None
             details = event.gui_details()
+            cursor.insertBlock(detailsBlockFormat)
+            cursor.setCharFormat(detailsCharFormat)
             if details:
-                cursor.insertBlock(detailsBlockFormat)
-                cursor.setCharFormat(detailsCharFormat)
                 cursor.insertText(details)
-                detailsBlock = cursor.block()
+            detailsBlock = cursor.block()
 
             self.eventTextBlocks.append((eventBlock, detailsBlock))
 
     def formatLine(self, context: RunContext, active):
-        event = context.path[-1].event
-        lines = self.eventTextBlocks[event.protocol_line]
-        blockFormats = self.makeBlockFormats(event.protocol_depth, active)
-        charFormats = self.makeCharFormats(active)
-        for line, blockFormat, charFormat in zip(lines, blockFormats, charFormats):
-            if line is not None:
+        for node_index, node in enumerate(context.path):
+            event = node.event
+            node_active = active and (node_index == len(context.path) - 1)
+            lines = self.eventTextBlocks[event.protocol_line]
+
+            blockFormats = self.makeBlockFormats(event.protocol_depth)
+            charFormats = self.makeCharFormats(node_active, on_path=active)
+            for line_index, (line, blockFormat, charFormat) in enumerate(zip(lines, blockFormats, charFormats)):
+                newText: Optional[str] = None
+                if line_index == 1:
+                    # Details line may change to indicate things like what iteration is running.
+                    newText = event.gui_details(context)
+
                 cursor = QTextCursor(line)
                 cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
                 cursor.setCharFormat(charFormat)
                 cursor.setBlockFormat(blockFormat)
-        # TODO: Marker for the active parents as well?
-        # TODO: Mention iterations for each event that supports them
+                if newText:
+                    cursor.insertText(newText)
 
     def progress(self, context: RunContext):
         if self.lastContext is not None:

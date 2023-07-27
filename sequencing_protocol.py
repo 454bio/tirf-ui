@@ -82,10 +82,6 @@ class Event:
         if callback is not None:
             callback(context)
 
-        if not context.hal:
-            # Delay so we can actually see what's going on in a mock run
-            time.sleep(1)
-
     def __len__(self):
         return 1
     
@@ -108,22 +104,28 @@ class ReactionCycle(Event):
             for step_index, event in enumerate(self.events):
                 event.run(context.create_child_context(event, step_index, iteration))
 
+            # Cleaving step
+            # TODO: This is doing all of the work from Event.run(). Should this just be a dynamically generated Event instead?
+            context.path[-1].step_index = None
+            callback = context.path[0].event.event_run_callback
+            if callback is not None:
+                callback(context)
+
             if not context.hal:
                 print("Cleaving skipped -- `mock = True`\n")
-            else:
-                # TODO: This should be its own Event so it shows up in the GUI
-                # This Event shouldn't be exposed in the protocol specification
-                # Make sure to account for this in the __len__ and __iter__ below and the viewer
-                context.path[-1].step_index = None
-                output_dir = context.output_dir() / "Cleaving"
-                output_dir.mkdir(parents=True)
-                context.hal.run_command({
-                    "command": "cleave",
-                    "args": {
-                        "cleave_args": self.cleaving,
-                        "output_dir": str(output_dir)
-                    }
-                })
+                # Delay so we can actually see what's going on in a mock run
+                time.sleep(1)
+                continue
+
+            output_dir = context.output_dir() / "Cleaving"
+            output_dir.mkdir(parents=True)
+            context.hal.run_command({
+                "command": "cleave",
+                "args": {
+                    "cleave_args": self.cleaving,
+                    "output_dir": str(output_dir)
+                }
+            })
 
     def __len__(self):
         return sum(map(len, self.events)) + 1
@@ -135,8 +137,26 @@ class ReactionCycle(Event):
                 yield node
     
     def gui_details(self, context: Optional[RunContext] = None) -> str:
-        # TODO: Use the context to print the current iteration
-        return f"{self.iterations} iterations, {len(self) - 1} children:"
+        if context is None:
+            return f"{self.iterations} iterations, {len(self) - 1} children:"
+
+        # Find the corresponding node so we can display which iteration we're on.
+        # Yes, this is O(n) in the length of the path.
+        # While it is technically valid to have a long path, if your protocol is more than 5 levels deep you have other problems.
+        my_node: Optional[RunContextNode] = None
+        for node in context.path:
+            if self == node.event:
+                my_node = node
+                break
+
+        if my_node is None or my_node.iteration is None:
+            raise ValueError
+
+        if my_node.step_index is None:
+            # Running the cleaving step
+            return f"Cleaving in iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children:"
+        else:
+            return f"Running iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children:"
 
 @dataclass
 class Group(Event):
@@ -160,8 +180,22 @@ class Group(Event):
                 yield node
     
     def gui_details(self, context: Optional[RunContext] = None) -> str:
-        # TODO: Use the context to print the current iteration
-        return f"{self.iterations} iterations, {len(self) - 1} children:"
+        if context is None:
+            return f"{self.iterations} iterations, {len(self) - 1} children:"
+
+        # Find the corresponding node so we can display which iteration we're on.
+        # Yes, this is O(n) in the length of the path.
+        # While it is technically valid to have a long path, if your protocol is more than 5 levels deep you have other problems.
+        my_node: Optional[RunContextNode] = None
+        for node in context.path:
+            if self == node.event:
+                my_node = node
+                break
+
+        if my_node is None or my_node.iteration is None or my_node.step_index is None:
+            raise ValueError
+
+        return f"Running iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children:"
 
 @dataclass
 class ImageSequence(Event):
@@ -173,20 +207,23 @@ class ImageSequence(Event):
 
         if not context.hal:
             print("Imaging skipped -- `mock = True`\n")
-        else:
-            output_dir = context.output_dir()
-            output_dir.mkdir(parents=True)
-            context.hal.run_command({
-                "command": "run_image_sequence",
-                "args": {
-                    "sequence": {
-                        "label": self.label,
-                        **self.imaging_args
-                    },
-                    "output_dir": str(output_dir)
-                }
-            })
-    
+            # Delay so we can actually see what's going on in a mock run
+            time.sleep(1)
+            return
+
+        output_dir = context.output_dir()
+        output_dir.mkdir(parents=True)
+        context.hal.run_command({
+            "command": "run_image_sequence",
+            "args": {
+                "sequence": {
+                    "label": self.label,
+                    **self.imaging_args
+                },
+                "output_dir": str(output_dir)
+            }
+        })
+
     def gui_details(self, context: Optional[RunContext] = None) -> Optional[str]:
         # TODO: Parse out more details
         images = self.imaging_args["images"]
@@ -203,6 +240,8 @@ class Wait(Event):
 
         if not context.hal:
             print(f"Wait skipped -- `mock = True`\n")
+            # Delay so we can actually see what's going on in a mock run
+            time.sleep(1)
             return
 
         # If we're in a QThread, periodically check if we need to stop

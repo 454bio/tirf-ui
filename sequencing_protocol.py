@@ -8,6 +8,7 @@ import json
 import time
 
 import jsonschema
+from PySide2.QtCore import QThread
 
 from hal import Hal
 
@@ -30,10 +31,11 @@ class RunContext:
     path: List[RunContextNode]
     root_dir: Path
     hal: Optional[Hal]
+    thread: Optional[QThread] = None
 
     def create_child_context(self, event: Event, step_index: Optional[int] = None, iteration: Optional[int] = None) -> RunContext:
         child_node = RunContextNode(event)
-        child_context = RunContext(self.path.copy(), self.root_dir, self.hal)
+        child_context = RunContext(self.path.copy(), self.root_dir, self.hal, self.thread)
 
         last_node = child_context.path[-1]
         if step_index is not None:
@@ -64,9 +66,14 @@ class Event:
         self.event_run_callback: Optional[Callable[[RunContext], None]] = None
 
     def run(self, context: RunContext):
+        thread = context.thread
+        if thread is not None and thread.isInterruptionRequested():
+            raise InterruptedError
+
         # TODO: Use a logging library
         print(f">>> Running {type(self).__name__} step")
         print(f"Line {self.protocol_line}, depth {self.protocol_depth}, path: {context}\nLabel: {self.label}")
+        print(f"Output dir: {context.output_dir()}")
         print(f"Time: {time.asctime(time.localtime(time.time()))}\n")
 
         # Notify the listener that we're running a new Event
@@ -107,7 +114,8 @@ class ReactionCycle(Event):
                 # TODO: This should be its own Event so it shows up in the GUI
                 # This Event shouldn't be exposed in the protocol specification
                 # Make sure to account for this in the __len__ and __iter__ below and the viewer
-                output_dir = context.output_dir()
+                context.path[-1].step_index = None
+                output_dir = context.output_dir() / "Cleaving"
                 output_dir.mkdir(parents=True)
                 context.hal.run_command({
                     "command": "cleave",
@@ -197,7 +205,20 @@ class Wait(Event):
             print(f"Wait skipped -- `mock = True`\n")
             return
 
-        time.sleep(self.duration_ms / 1000)
+        # If we're in a QThread, periodically check if we need to stop
+        # TODO: There's probably a better way to do this
+        thread = context.thread
+        if thread is not None:
+            remaining_duration = self.duration_ms
+            while remaining_duration > 0:
+                duration = min(remaining_duration, 1000)
+                thread.msleep(duration)
+                remaining_duration -= duration
+                if thread.isInterruptionRequested():
+                    raise InterruptedError
+        else:
+            time.sleep(self.duration_ms / 1000)
+
         print()
 
     def gui_details(self, context: Optional[RunContext] = None) -> Optional[str]:

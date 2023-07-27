@@ -28,7 +28,6 @@ class ProtocolThread(QThread):
         super().__init__()
         self.protocol: Optional[Event] = None
         self.hal: Optional[Hal] = None
-        self.output_dir = OUTPUT_DIR_ROOT / datetime.now().isoformat()
 
         if HAL_PATH is not None and HAL_PATH.is_socket():
             self.hal = Hal(str(HAL_PATH))
@@ -37,17 +36,19 @@ class ProtocolThread(QThread):
 
     @Slot(None)
     def run(self):
-        try:
-            # TODO: output dir and hal
-            self.protocol.event_run_callback = self.eventRunCallback
-            self.protocol.run(RunContext([RunContextNode(self.protocol)], self.output_dir, self.hal))
-        except:
-            traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
-            self.error.emit((exctype, value, traceback.format_exc()))
-        finally:
-            self.protocol.event_run_callback = None
-            self.finished.emit()
+        protocol = self.protocol
+        output_dir = OUTPUT_DIR_ROOT / datetime.now().isoformat()
+        if protocol is not None:
+            try:
+                protocol.event_run_callback = self.eventRunCallback
+                protocol.run(RunContext([RunContextNode(protocol)], output_dir, self.hal, self))
+            except:
+                traceback.print_exc()
+                exctype, value = sys.exc_info()[:2]
+                self.error.emit((exctype, value, traceback.format_exc()))
+            finally:
+                protocol.event_run_callback = None
+                self.finished.emit()
 
     def eventRunCallback(self, context: RunContext):
         self.progress.emit(context)
@@ -179,7 +180,7 @@ class SequencingUi(QMainWindow):
 
     def stop(self):
         self.stopButton.setEnabled(False)
-        self.protocolThread.terminate()
+        self.protocolThread.requestInterruption()
 
     def finished(self):
         self.stopButton.setEnabled(False)

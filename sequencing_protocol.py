@@ -3,7 +3,7 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import ClassVar, Dict, List, Optional, Tuple
 import json
 import time
 
@@ -53,22 +53,31 @@ class RunContext:
 
 @dataclass
 class Event:
+    readable_type: ClassVar[str] = "Abstract Event"
     label: str
     protocol_line: int
+    protocol_depth: int
 
     def run(self, context: RunContext):
         # TODO: Use a logging library
         print(f">>> Running {type(self).__name__} step")
-        print(f"Line {self.protocol_line}, path: {context}\nLabel: {self.label}")
+        print(f"Line {self.protocol_line}, depth {self.protocol_depth}, path: {context}\nLabel: {self.label}")
         print(f"Time: {time.asctime(time.localtime(time.time()))}\n")
 
         # TODO: Emit this context from the root Event so the viewer knows where we are
 
     def __len__(self):
         return 1
+    
+    def __iter__(self):
+        yield self
+    
+    def gui_details(self, context: Optional[RunContext] = None) -> Optional[str]:
+        return None
 
 @dataclass
 class ReactionCycle(Event):
+    readable_type: ClassVar[str] = "Reaction Cycle"
     events: List[Event]
     cleaving: Dict
     iterations: int = 1
@@ -84,7 +93,7 @@ class ReactionCycle(Event):
             else:
                 # TODO: This should be its own Event so it shows up in the GUI
                 # This Event shouldn't be exposed in the protocol specification
-                # Make sure to account for this in the length below and the viewer
+                # Make sure to account for this in the __len__ and __iter__ below and the viewer
                 output_dir = context.output_dir()
                 output_dir.mkdir(parents=True)
                 context.hal.run_command({
@@ -97,9 +106,20 @@ class ReactionCycle(Event):
 
     def __len__(self):
         return sum(map(len, self.events)) + 1
+    
+    def __iter__(self):
+        yield self
+        for event in self.events:
+            for node in event:
+                yield node
+    
+    def gui_details(self, context: Optional[RunContext] = None) -> str:
+        # TODO: Use the context to print the current iteration
+        return f"{self.iterations} iterations, {len(self) - 1} children:"
 
 @dataclass
 class Group(Event):
+    readable_type: ClassVar[str] = "Group"
     events: List[Event]
     iterations: int = 1
 
@@ -111,9 +131,20 @@ class Group(Event):
 
     def __len__(self):
         return sum(map(len, self.events)) + 1
+    
+    def __iter__(self):
+        yield self
+        for event in self.events:
+            for node in event:
+                yield node
+    
+    def gui_details(self, context: Optional[RunContext] = None) -> str:
+        # TODO: Use the context to print the current iteration
+        return f"{self.iterations} iterations, {len(self) - 1} children:"
 
 @dataclass
 class ImageSequence(Event):
+    readable_type: ClassVar[str] = "Image Sequence"
     imaging_args: Dict
 
     def run(self, context: RunContext):
@@ -134,9 +165,15 @@ class ImageSequence(Event):
                     "output_dir": str(output_dir)
                 }
             })
+    
+    def gui_details(self, context: Optional[RunContext] = None) -> Optional[str]:
+        # TODO: Parse out more details
+        images = self.imaging_args["images"]
+        return f"{len(images)} images"
 
 @dataclass
 class Wait(Event):
+    readable_type: ClassVar[str] = "Wait"
     duration_ms: int
 
     def run(self, context: RunContext):
@@ -150,6 +187,9 @@ class Wait(Event):
         time.sleep(self.duration_ms / 1000)
         print()
 
+    def gui_details(self, context: Optional[RunContext] = None) -> Optional[str]:
+        return f"{self.duration_ms / 1000} seconds"
+
 SEQUENCING_PROTOCOL_SCHEMA_PATH = "sequencing_protocol_schema.json"
 with open(SEQUENCING_PROTOCOL_SCHEMA_PATH) as schema_file:
     SEQUENCING_PROTOCOL_SCHEMA_JSON = json.load(schema_file)
@@ -157,7 +197,7 @@ with open(SEQUENCING_PROTOCOL_SCHEMA_PATH) as schema_file:
 def validate_protocol_json(protocol_json: Dict) -> None:
     jsonschema.validate(protocol_json, SEQUENCING_PROTOCOL_SCHEMA_JSON)
 
-def load_protocol_json(protocol_line: int, protocol_json: Dict) -> Tuple[Event, int]:
+def load_protocol_json(protocol_json: Dict, protocol_line: int = 0, depth: int = 0) -> Tuple[Event, int]:
     # Assumes that `protocol_json` is valid. Make sure to call `validate_protocol_json` first.
     # Can't do this validation here because of the recursion.
     label = protocol_json["label"]
@@ -171,7 +211,7 @@ def load_protocol_json(protocol_line: int, protocol_json: Dict) -> Tuple[Event, 
         children = []
         event_len = 1
         for event_json in args["events"]:
-            child, child_len = load_protocol_json(next_protocol_line, event_json)
+            child, child_len = load_protocol_json(event_json, next_protocol_line, depth+1)
             next_protocol_line += child_len
             event_len += child_len
             children.append(child)
@@ -179,6 +219,7 @@ def load_protocol_json(protocol_line: int, protocol_json: Dict) -> Tuple[Event, 
         return ReactionCycle(
             label,
             protocol_line,
+            depth,
             children,
             args["cleaving"],
             args["iterations"]), event_len
@@ -191,7 +232,7 @@ def load_protocol_json(protocol_line: int, protocol_json: Dict) -> Tuple[Event, 
         children = []
         event_len = 1
         for event_json in args["events"]:
-            child, child_len = load_protocol_json(next_protocol_line, event_json)
+            child, child_len = load_protocol_json(event_json, next_protocol_line, depth+1)
             next_protocol_line += child_len
             event_len += child_len
             children.append(child)
@@ -199,14 +240,15 @@ def load_protocol_json(protocol_line: int, protocol_json: Dict) -> Tuple[Event, 
         return Group(
             label,
             protocol_line,
+            depth,
             children,
             args["iterations"]), event_len
 
     elif event_type == "ImageSequence":
-        return ImageSequence(label, protocol_line, protocol_json["ImageSequence_args"]), 1
+        return ImageSequence(label, protocol_line, depth, protocol_json["ImageSequence_args"]), 1
 
     elif event_type == "Wait":
-        return Wait(label, protocol_line, protocol_json["Wait_args"]["duration_ms"]), 1
+        return Wait(label, protocol_line, depth, protocol_json["Wait_args"]["duration_ms"]), 1
 
     else:
         raise ValueError(f"Unsupported type {event_type}")
@@ -225,7 +267,7 @@ if __name__ == "__main__":
     with open(args.protocol) as protocol_file:
         protocol_json = json.load(protocol_file)
     validate_protocol_json(protocol_json)
-    protocol, _ = load_protocol_json(0, protocol_json)
+    protocol, _ = load_protocol_json(protocol_json)
 
     # Connect to the HAL
     if not args.mock:

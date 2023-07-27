@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple
 
 from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
-from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QDialog
+from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage
 
 from sequencing_protocol import load_protocol_json, Event, RunContext, RunContextNode, Hal
 
@@ -155,7 +155,7 @@ class SequencingUi(QMainWindow):
         # ... make them do stuff...
         self.protocolThread.progress.connect(self.protocolViewer.progress)
         self.protocolThread.finished.connect(self.finished)
-        # TODO: self.protocolThread.error
+        self.protocolThread.error.connect(self.error)
         self.openAction.triggered.connect(self.open)
         # self.settingsAction.triggered.connect()
         self.startButton.clicked.connect(self.start)
@@ -188,6 +188,11 @@ class SequencingUi(QMainWindow):
     def stop(self):
         self.stopButton.setEnabled(False)
         self.protocolThread.requestInterruption()
+
+    def error(self, error: Tuple):
+        exception_type, exception, text = error
+        if exception_type is not InterruptedError:
+            QErrorMessage.qtHandler().showMessage(f"{exception_type.__name__}: {str(exception)}")
 
     def finished(self):
         self.stopButton.setEnabled(False)

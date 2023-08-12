@@ -1,20 +1,60 @@
-from functools import partial
 from pathlib import Path
 from typing import List
+import socket
+import time
+import traceback
 
 import bitstruct
 
-from PySide2.QtCore import QByteArray
-from PySide2.QtNetwork import QLocalSocket
+from PySide2.QtCore import Slot, QThread
 from PySide2.QtWidgets import QGridLayout, QLabel, QWidget
 
 PREVIEW_ROWS = 2
 PREVIEW_COLS = 2
 
-# 1 MB. The header format supports up to 48 MB, but with the current settings each message will be around 200 KB.
-MAX_MESSAGE_SIZE = 1 << 20
-
 PREVIEW_HEADER_FORMAT = "u4u12u12u6u26"
+PREVIEW_HEADER_SIZE = bitstruct.calcsize(PREVIEW_HEADER_FORMAT)
+
+class PreviewThread(QThread):
+    def __init__(self, socket_path: Path):
+        super().__init__()
+        self.socket_path = socket_path
+
+    @Slot(None)
+    def run(self):
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            while True:
+                try:
+                    s.connect(str(self.socket_path))
+                    while True:
+                        self.read_preview_bytes(s)
+                except InterruptedError:
+                    break
+                except:
+                    # Something went wrong with the preview socket. Let me know and wait a bit before trying again.
+                    traceback.print_exc()
+                    time.sleep(5)
+
+    def read_preview_bytes(self, s: socket.socket) -> bytes:
+        header = s.recv(PREVIEW_HEADER_SIZE)
+        print(len(header))
+        assert len(header) == PREVIEW_HEADER_SIZE
+
+        (version, width, height, imageFormat, image_size) = bitstruct.unpack(PREVIEW_HEADER_FORMAT, header)
+        print(version, width, height, imageFormat, image_size)  # XXX
+        assert version == 0
+
+        image_bytes = bytes()
+        while len(image_bytes) < image_size:
+            image_bytes += s.recv(image_size - len(image_bytes))
+            print(f"Read {len(image_bytes)} of {image_size} bytes")  # XXX
+
+        print("Read entire preview image")  # XXX
+        with open("foo", "wb") as f:
+            f.write(image_bytes)
+        # TODO: The image appears to be shorter than the header declared -- there is a new header slightly too early.
+        # This is throwing off read alignments.
+        return image_bytes
 
 class PreviewWidget(QWidget):
     def __init__(self, previewPath: Path):
@@ -31,27 +71,6 @@ class PreviewWidget(QWidget):
 
         self.setLayout(layout)
 
-        # ... set up socket events....
-        self.socket = QLocalSocket(self)
-        # TODO: This is not letting me set this correctly
-        self.socket.setReadBufferSize(MAX_MESSAGE_SIZE)
-        self.socket.readyRead.connect(self.readPreviewMessage)
-        self.socket.disconnected.connect(partial(self.connectSocket, previewPath))
-
-        # ... and actually connect to the socket.
-        self.connectSocket(previewPath)
-
-    def connectSocket(self, socketPath):
-        self.socket.connectToServer(str(socketPath))
-
-    def readPreviewMessage(self):
-        # TODO: Why are we only getting 8192 bytes?
-        # Try to figure out how to get the whole thing at once.
-        message: QByteArray = self.socket.readAll()
-        print(len(message))  # XXX
-
-        (version, width, height, imageFormat, bufferSize) = bitstruct.unpack(PREVIEW_HEADER_FORMAT, message.data())
-        print(version, width, height, imageFormat, bufferSize)  # XXX
-
-        # TODO: Create the QImage
-        # TODO: Paint it on one of the labels (which one?)
+        self.socketThread = PreviewThread(previewPath)
+        self.socketThread.start()
+        # TODO: Connect this to the image labels somehow

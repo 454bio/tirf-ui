@@ -9,6 +9,7 @@ from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage
 
+from preview import PreviewWidget
 from sequencing_protocol import load_protocol_json, Event, RunContext, RunContextNode, Hal
 
 WINDOW_TITLE_BASE = "454 Sequencer"
@@ -17,6 +18,7 @@ MARGIN_BETWEEN_EVENTS = 12
 
 # TODO: Make these configurable
 HAL_PATH: Optional[Path] = Path().home() / "454" / "socket"
+PREVIEW_PATH: Optional[Path] = Path().home() / "454" / "preview"
 OUTPUT_DIR_ROOT = Path.home() / "454"/ "output"
 
 MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
@@ -59,6 +61,7 @@ class ProtocolViewer(QTextEdit):
     def __init__(self):
         super().__init__()
         self.setReadOnly(True)
+        self.setMinimumSize(400, 400)
 
         self.eventTextBlocks: List[Tuple[QTextBlock, Optional[QTextBlock]]] = []
         self.lastContext: Optional[RunContext] = None
@@ -140,6 +143,10 @@ class SequencingUi(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        previewWidget: Optional[PreviewWidget] = None
+        if PREVIEW_PATH is not None and PREVIEW_PATH.is_socket():
+            previewWidget = PreviewWidget(PREVIEW_PATH)
+
         # Create the main elements...
         self.protocolThread = ProtocolThread()
         self.protocolViewer = ProtocolViewer()
@@ -164,24 +171,31 @@ class SequencingUi(QMainWindow):
         self.stopButton.clicked.connect(self.stop)
 
         # ... and lay them out.
+        # TODO: mainLayout that holds leftLayout and rightLayout
         mainWidget = QWidget()
-        mainLayout = QVBoxLayout()
+        mainLayout = QHBoxLayout()
         mainWidget.setLayout(mainLayout)
-        mainLayout.addWidget(self.protocolViewer)
+
+        leftWidget = QWidget()
+        leftLayout = QVBoxLayout()
+        leftWidget.setLayout(leftLayout)
+        leftLayout.addWidget(self.protocolViewer)
         startStopWidget = QWidget()
         startStopLayout = QHBoxLayout()
         startStopWidget.setLayout(startStopLayout)
         startStopLayout.addWidget(self.startButton)
         startStopLayout.addWidget(self.stopButton)
-        mainLayout.addWidget(startStopWidget)
+        leftLayout.addWidget(startStopWidget)
+        mainLayout.addWidget(leftWidget)
+
+        if previewWidget is not None:
+            mainLayout.addWidget(previewWidget)
 
         fileMenu = self.menuBar().addMenu("&File")
         fileMenu.addAction(self.openAction)
         # fileMenu.addAction(self.settingsAction)
 
         self.setCentralWidget(mainWidget)
-
-        self.setMinimumSize(550, 550)
         self.setWindowTitle(WINDOW_TITLE_BASE)
 
         self.stop()

@@ -7,7 +7,8 @@ import traceback
 
 import bitstruct
 
-from PySide2.QtCore import Slot, QThread
+from PySide2.QtCore import Signal, Slot, QThread
+from PySide2.QtGui import QImage, QPixmap
 from PySide2.QtWidgets import QGridLayout, QLabel, QWidget
 
 PREVIEW_ROWS = 2
@@ -17,6 +18,8 @@ PREVIEW_HEADER_FORMAT = "u4u12u12u6u26"
 PREVIEW_HEADER_SIZE = math.ceil(bitstruct.calcsize(PREVIEW_HEADER_FORMAT) / 8)
 
 class PreviewThread(QThread):
+    received_image = Signal(QImage, int)
+
     def __init__(self, socket_path: Path):
         super().__init__()
         self.socket_path = socket_path
@@ -27,8 +30,12 @@ class PreviewThread(QThread):
             try:
                 with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
                     s.connect(str(self.socket_path))
+                    frame = 0
                     while True:
-                        self.read_preview_bytes(s)
+                        image = self.read_preview_image(s)
+                        self.received_image.emit(image, frame)
+                        frame += 1
+
             except InterruptedError:
                 break
             except:
@@ -36,7 +43,7 @@ class PreviewThread(QThread):
                 traceback.print_exc()
                 time.sleep(5)
 
-    def read_preview_bytes(self, s: socket.socket) -> bytes:
+    def read_preview_image(self, s: socket.socket) -> QImage:
         header = s.recv(PREVIEW_HEADER_SIZE)
         assert len(header) == PREVIEW_HEADER_SIZE
 
@@ -47,7 +54,7 @@ class PreviewThread(QThread):
         while len(image_bytes) < image_size:
             image_bytes.extend(s.recv(image_size - len(image_bytes)))
 
-        return image_bytes
+        return QImage(image_bytes, width, height, QImage.Format(imageFormat))
 
 class PreviewWidget(QWidget):
     def __init__(self, previewPath: Path):
@@ -55,15 +62,20 @@ class PreviewWidget(QWidget):
 
         # Set up UI...
         layout = QGridLayout()
-        labels: List[QLabel] = []
+        self.labels: List[QLabel] = []
         for i in range(PREVIEW_ROWS * PREVIEW_COLS):
             label = QLabel()
-            label.setMinimumSize(250, 250)
-            labels.append(label)
+            label.setMinimumSize(253, 190)
+            self.labels.append(label)
             layout.addWidget(label, i // PREVIEW_ROWS, i % PREVIEW_ROWS)
 
         self.setLayout(layout)
 
         self.socketThread = PreviewThread(previewPath)
+        self.socketThread.received_image.connect(self.showImage)
         self.socketThread.start()
-        # TODO: Connect this to the image labels somehow
+
+    @Slot(QImage, int)
+    def showImage(self, image: QImage, frame: int):
+        label = self.labels[frame % (PREVIEW_ROWS * PREVIEW_COLS)]
+        label.setPixmap(QPixmap.fromImage(image))

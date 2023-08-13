@@ -17,6 +17,9 @@ PREVIEW_COLS = 2
 PREVIEW_HEADER_FORMAT = "u4u12u12u6u26"
 PREVIEW_HEADER_SIZE = math.ceil(bitstruct.calcsize(PREVIEW_HEADER_FORMAT) / 8)
 
+def align_ceil_32(unaligned: int):
+    return math.ceil(unaligned / 32) * 32
+
 class PreviewThread(QThread):
     received_image = Signal(QImage, int)
 
@@ -54,7 +57,7 @@ class PreviewThread(QThread):
         while len(image_bytes) < image_size:
             image_bytes.extend(s.recv(image_size - len(image_bytes)))
 
-        return QImage(image_bytes, width, height, QImage.Format(imageFormat))
+        return QImage(image_bytes, width, height, align_ceil_32(width*3), QImage.Format(imageFormat))
 
 class PreviewWidget(QWidget):
     def __init__(self, previewPath: Path):

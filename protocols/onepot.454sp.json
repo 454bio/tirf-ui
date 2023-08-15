@@ -5,6 +5,13 @@
         "iterations": 1,
         "events": [
             {
+                "label": "Experiment Temperature",
+                "event_type": "SetTemperature",
+                "SetTemperature_args": {
+                    "temperature_kelvin": 50
+                }
+            },
+            {
                 "label": "Reaction Cycle",
                 "event_type": "ReactionCycle",
                 "ReactionCycle_args": {

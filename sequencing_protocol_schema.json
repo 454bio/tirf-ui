@@ -21,6 +21,7 @@
                         "ReactionCycle",
                         "Group",
                         "ImageSequence",
+                        "SetTemperature",
                         "Wait"
                     ]
                 },
@@ -45,6 +46,14 @@
                     "options": {
                         "dependencies": {
                             "event_type": "ImageSequence"
+                        }
+                    }
+                },
+                "SetTemperature_args": {
+                    "$ref": "#/definitions/SetTemperature_args_def",
+                    "options": {
+                        "dependencies": {
+                            "event_type": "SetTemperature"
                         }
                     }
                 },
@@ -105,6 +114,23 @@
                                         "options": {
                                             "dependencies": {
                                                 "event_type": "ImageSequence"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "properties": {
+                                "event_type": {
+                                    "pattern": "SetTemperature"
+                                },
+                                "required": {
+                                    "ImageSequence_args": {
+                                        "$ref": "#/definitions/SetTemperature_args_def",
+                                        "options": {
+                                            "dependencies": {
+                                                "event_type": "SetTemperature"
                                             }
                                         }
                                     }
@@ -219,6 +245,19 @@
             "required": [
                 "schema_version",
                 "images"
+            ]
+        },
+        "SetTemperature_args_def": {
+            "title": "Set Temperature",
+            "type": "object",
+            "properties": {
+                "temperature_kelvin": {
+                    "title": "Temperature (K)",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "temperature_kelvin"
             ]
         },
         "ImageParameters_def": {

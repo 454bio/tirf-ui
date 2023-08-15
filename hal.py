@@ -24,3 +24,9 @@ class Hal:
             response = json.loads(response_raw.decode(ENCODING))
             if not response["success"]:
                 raise HalError(response["error_message"])
+
+    def disable_heater(self):
+        self.run_command({
+            "command": "disable_heater",
+            "args": {}
+        })

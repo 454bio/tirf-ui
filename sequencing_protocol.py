@@ -229,6 +229,36 @@ class ImageSequence(Event):
         images = self.imaging_args["images"]
         return f"{len(images)} images"
 
+# TODO: Calculate a sane value for this using the temperature difference
+MAX_TEMPERATURE_WAIT_S = 10 * 60  # 10 minutes
+# TODO: Calculate a sane value for this using the estimated time remaining in the protocol
+MAX_TEMPERATURE_HOLD_S = 8 * 60 * 60  # 8 hours
+
+@dataclass
+class SetTemperature(Event):
+    readable_type: ClassVar[str] = "Set Temperature"
+    set_temperature_args: Dict
+
+    def run(self, context: RunContext):
+        super().run(context)
+
+        if not context.hal:
+            print("Temperature skipped -- `mock = True`")
+            # Delay so we can actually see what's going on in a mock run
+            time.sleep(1)
+            return
+
+        context.hal.run_command({
+            "command": "wait_for_temperature",
+            "args": {
+                "temperature_args": {
+                    "target_temperature_kelvin": self.set_temperature_args["temperature_kelvin"],
+                    "wait_time_s": MAX_TEMPERATURE_WAIT_S,
+                    "hold_time_s": MAX_TEMPERATURE_HOLD_S
+                }
+            }
+        })
+
 @dataclass
 class Wait(Event):
     readable_type: ClassVar[str] = "Wait"
@@ -320,6 +350,13 @@ def load_protocol_json(protocol_json: Dict, protocol_line: int = 0, depth: int =
     elif event_type == "ImageSequence":
         return ImageSequence(label, protocol_line, depth, protocol_json["ImageSequence_args"]), 1
 
+    elif event_type == "SetTemperature":
+        return SetTemperature(
+            label,
+            protocol_line,
+            depth,
+            protocol_json["SetTemperature_args"]), 1
+
     elif event_type == "Wait":
         return Wait(label, protocol_line, depth, protocol_json["Wait_args"]["duration_ms"]), 1
 
@@ -348,4 +385,13 @@ if __name__ == "__main__":
     else:
         hal = None
 
-    protocol.run(RunContext([RunContextNode(protocol)], Path(args.output_directory), hal))
+    try:
+        protocol.run(RunContext([RunContextNode(protocol)], Path(args.output_directory), hal))
+    except Exception as e:
+        print(e)
+    finally:
+        if hal is not None:
+            try:
+                hal.disable_heater()
+            except Exception as e:
+                print(e)

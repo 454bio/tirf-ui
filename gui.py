@@ -51,13 +51,6 @@ class ProtocolThread(QThread):
                 exctype, value = sys.exc_info()[:2]
                 self.error.emit((exctype, value, traceback.format_exc()))
             finally:
-                if self.hal is not None:
-                    try:
-                        self.hal.disable_heater()
-                    except:
-                        traceback.print_exc()
-                        exctype, value = sys.exc_info()[:2]
-                        self.error.emit((exctype, value, traceback.format_exc()))
                 protocol.event_run_callback = None
                 self.finished.emit()
 
@@ -218,6 +211,9 @@ class SequencingUi(QMainWindow):
             QErrorMessage.qtHandler().showMessage(f"{exception_type.__name__}: {str(exception)}")
 
     def finished(self):
+        if self.protocolThread.hal is not None:
+            self.protocolThread.hal.disable_heater(self.protocolThread)
+
         self.stopButton.setEnabled(False)
         self.startButton.setEnabled(True)
         self.openAction.setEnabled(True)

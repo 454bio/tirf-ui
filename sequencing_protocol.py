@@ -125,7 +125,7 @@ class ReactionCycle(Event):
                     "cleave_args": self.cleaving,
                     "output_dir": str(output_dir)
                 }
-            })
+            }, context.thread)
 
     def __len__(self):
         return sum(map(len, self.events)) + 1
@@ -222,7 +222,7 @@ class ImageSequence(Event):
                 },
                 "output_dir": str(output_dir)
             }
-        })
+        }, context.thread)
 
     def gui_details(self, context: Optional[RunContext] = None) -> Optional[str]:
         # TODO: Parse out more details
@@ -257,7 +257,7 @@ class SetTemperature(Event):
                     "hold_time_s": MAX_TEMPERATURE_HOLD_S
                 }
             }
-        })
+        }, context.thread)
 
     def gui_details(self, context: Optional[RunContext] = None) -> str:
         return f"Wait until {self.set_temperature_args['temperature_kelvin'] - 273.15}º C"
@@ -394,7 +394,4 @@ if __name__ == "__main__":
         print(e)
     finally:
         if hal is not None:
-            try:
-                hal.disable_heater()
-            except Exception as e:
-                print(e)
+            hal.disable_heater(None)

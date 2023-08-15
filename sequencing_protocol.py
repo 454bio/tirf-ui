@@ -259,6 +259,9 @@ class SetTemperature(Event):
             }
         })
 
+    def gui_details(self, context: Optional[RunContext] = None) -> str:
+        return f"Wait until {self.set_temperature_args['temperature_kelvin'] - 273.15}º C"
+
 @dataclass
 class Wait(Event):
     readable_type: ClassVar[str] = "Wait"

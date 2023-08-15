@@ -8,7 +8,7 @@
                 "label": "Experiment Temperature",
                 "event_type": "SetTemperature",
                 "SetTemperature_args": {
-                    "temperature_kelvin": 50
+                    "temperature_kelvin": 323.15
                 }
             },
             {

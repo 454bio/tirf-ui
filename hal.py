@@ -36,7 +36,7 @@ class Hal:
                         pass
                 else:
                     # Interrupted, don't bother trying to parse
-                    return
+                    return {}
             else:
                 response_raw = s.recv(MAX_RESPONSE_SIZE)
             response = json.loads(response_raw.decode(ENCODING))

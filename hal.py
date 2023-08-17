@@ -40,7 +40,11 @@ class Hal:
             else:
                 response_raw = s.recv(MAX_RESPONSE_SIZE)
             response = json.loads(response_raw.decode(ENCODING))
-            if not response["success"]:
+            # Boost.PropertyTree converts all values to strings, so we need to massage it into a bool.
+            # TODO: Remove this once we have Boost.JSON 
+            success_raw = response["success"]
+            success = success_raw if type(success_raw) == bool else success_raw == "true"
+            if not success:
                 raise HalError(response["error_message"])
 
             return response["response"]

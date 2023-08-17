@@ -10,7 +10,7 @@ from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFo
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage
 
 from preview import PreviewWidget
-from sequencing_protocol import load_protocol_json, Event, RunContext, RunContextNode, Hal
+from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, Hal
 
 WINDOW_TITLE_BASE = "454 Sequencer"
 PROTOCOLS_DIR = "protocols"
@@ -230,8 +230,14 @@ class SequencingUi(QMainWindow):
             # Dialog closed
             return
         
-        with open(path) as protocol_file:
-            self.protocol, _ = load_protocol_json(json.load(protocol_file))
+        try:
+            with open(path) as protocol_file:
+                protocol_json = json.load(protocol_file)
+                validate_protocol_json(protocol_json)
+                self.protocol, _ = load_protocol_json(protocol_json)
+        except Exception as e:
+            self.error((type(e), e, ""))
+            return
 
         self.protocolViewer.clear()
         self.protocolViewer.loadProtocol(self.protocol)

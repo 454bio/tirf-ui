@@ -18,9 +18,9 @@ PROTOCOLS_DIR = "protocols"
 MARGIN_BETWEEN_EVENTS = 12
 
 # TODO: Make these configurable
-HAL_PATH: Optional[Path] = Path().home() / "454" / "socket"
-PREVIEW_PATH: Optional[Path] = Path().home() / "454" / "preview"
-OUTPUT_DIR_ROOT = Path.home() / "454"/ "output"
+HAL_PATH: Optional[Path] = Path("/454/api")
+PREVIEW_PATH: Optional[Path] = Path("/454/preview")
+OUTPUT_DIR_ROOT = Path.home() / "454" / "output"
 
 MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
 

@@ -11,6 +11,7 @@ from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, Q
 
 from preview import PreviewWidget
 from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, Hal
+from user_prompts import PromptApi
 
 WINDOW_TITLE_BASE = "454 Sequencer"
 VERSION = "0.0.1"
@@ -264,6 +265,7 @@ class SequencingUi(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     ui = SequencingUi()
+    promptApi = PromptApi(ui)
     ui.show()
 
     if HAL_PATH is None or not HAL_PATH.is_socket():

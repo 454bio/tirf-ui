@@ -15,7 +15,7 @@ class HalError(Exception):
 class Hal:
     socket_path: str
 
-    def run_command(self, command: Dict, thread):
+    def run_command(self, command: Dict, thread) -> Dict:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
             s.connect(self.socket_path)
 
@@ -42,6 +42,8 @@ class Hal:
             response = json.loads(response_raw.decode(ENCODING))
             if not response["success"]:
                 raise HalError(response["error_message"])
+
+            return response["response"]
 
     def disable_heater(self, thread, tries=5):
         for _ in range(tries):

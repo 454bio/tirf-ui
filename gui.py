@@ -7,12 +7,13 @@ from typing import List, Optional, Tuple
 
 from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
-from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage
+from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel
 
 from preview import PreviewWidget
 from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, Hal
 
 WINDOW_TITLE_BASE = "454 Sequencer"
+VERSION = "0.0.1"
 PROTOCOLS_DIR = "protocols"
 MARGIN_BETWEEN_EVENTS = 12
 
@@ -197,6 +198,20 @@ class SequencingUi(QMainWindow):
 
         self.setCentralWidget(mainWidget)
         self.setWindowTitle(WINDOW_TITLE_BASE)
+
+        statusBarText = [f"GUI version {VERSION}"]
+        if self.protocolThread.hal is not None:
+            halMetadata = self.protocolThread.hal.run_command({
+                "command": "get_metadata",
+                "args": {}
+            }, None)
+            statusBarText.append(f"Connected to unit {halMetadata['serial_number']}")
+            statusBarText.append(f"HAL version {halMetadata['hal_version']}")
+        else:
+            statusBarText.append("Mock mode (no HAL)")
+        statusBar = self.statusBar()
+        for text in statusBarText:
+            statusBar.addPermanentWidget(QLabel(text))
 
         self.stop()
         self.startButton.setEnabled(False)

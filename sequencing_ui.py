@@ -12,13 +12,12 @@ from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, Q
 from preview_widget import PreviewWidget
 from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, Hal
 from user_prompts import PromptApi
+from version import VERSION
 
 WINDOW_TITLE_BASE = "454 Sequencer"
-VERSION = "0.0.1"
 PROTOCOLS_DIR = "protocols"
 MARGIN_BETWEEN_EVENTS = 12
 
-# TODO: Make these configurable
 HAL_PATH: Optional[Path] = Path("/454/api")
 PREVIEW_PATH: Optional[Path] = Path("/454/preview")
 OUTPUT_DIR_ROOT = Path.home() / "454" / "output"

@@ -60,17 +60,20 @@ class PreviewThread(QThread):
         return QImage(image_bytes, width, height, align_ceil_32(width*3), QImage.Format(imageFormat))
 
 class PreviewWidget(QWidget):
-    def __init__(self, previewPath: Path):
+    def __init__(self, previewPath: Path, rows: int = PREVIEW_ROWS, cols: int = PREVIEW_COLS):
         super().__init__()
+
+        self.rows = rows
+        self.cols = cols
 
         # Set up UI...
         layout = QGridLayout()
         self.labels: List[QLabel] = []
-        for i in range(PREVIEW_ROWS * PREVIEW_COLS):
+        for i in range(self.rows * self.cols):
             label = QLabel()
             label.setMinimumSize(253, 190)
             self.labels.append(label)
-            layout.addWidget(label, i // PREVIEW_ROWS, i % PREVIEW_ROWS)
+            layout.addWidget(label, i // self.rows, i % self.cols)
 
         self.setLayout(layout)
 
@@ -80,5 +83,5 @@ class PreviewWidget(QWidget):
 
     @Slot(QImage, int)
     def showImage(self, image: QImage, frame: int):
-        label = self.labels[frame % (PREVIEW_ROWS * PREVIEW_COLS)]
+        label = self.labels[frame % (self.rows * self.cols)]
         label.setPixmap(QPixmap.fromImage(image))

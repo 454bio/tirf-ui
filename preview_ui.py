@@ -1,17 +1,17 @@
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QIntValidator
-from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QSlider, QVBoxLayout, QWidget
+from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from hal import boost_bool, Hal
 from preview_widget import PreviewWidget
 from user_prompts import PromptApi
 from version import VERSION
 
-WINDOW_TITLE_BASE = "454 Image Preview"
+WINDOW_TITLE = "454 Image Preview"
 HAL_PATH: Optional[Path] = Path("/454/api")
 PREVIEW_PATH: Optional[Path] = Path("/454/preview")
 MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
@@ -71,6 +71,7 @@ class PreviewUi(QMainWindow):
             durationNumber.setMaximumWidth(50)
             durationNumber.setValidator(QIntValidator())
             durationNumber.setAlignment(Qt.AlignRight)
+            durationNumber.setText("0")
 
             widgets.append(QLabel("ms"))
 
@@ -81,8 +82,13 @@ class PreviewUi(QMainWindow):
 
         # LED controls.
         ledControlsLayout = QGridLayout()
+        self.durationNumbers: Dict[str, QLineEdit] = {}
         for colorIndex, colorName in enumerate(["red", "orange", "green", "blue"]):
             for widgetIndex, widget in enumerate(make_led_controls(colorName)):
+                if isinstance(widget, QLineEdit):
+                    # Hold on to the text inputs so we can retrieve their values on `capture()`.
+                    # TODO: Will need a different way of doing this if there is ever another QLineEdit here
+                    self.durationNumbers[colorName] = widget
                 ledControlsLayout.addWidget(widget, colorIndex, widgetIndex)
         ledControlsWidget = QWidget()
         ledControlsWidget.setLayout(ledControlsLayout)
@@ -93,6 +99,9 @@ class PreviewUi(QMainWindow):
             # TODO: Filter controls
             pass
 
+        captureNowButton = QPushButton("Capture")
+        captureNowButton.clicked.connect(self.capture)
+
         # Lay them out.
         mainWidget = QWidget()
         mainLayout = QHBoxLayout()
@@ -102,6 +111,7 @@ class PreviewUi(QMainWindow):
         leftLayout.addWidget(ledControlsWidget)
         if filterServoPicker:
             leftWidget.addWidget(filterServoPicker)
+        leftLayout.addWidget(captureNowButton)
         leftWidget.setLayout(leftLayout)
         mainLayout.addWidget(leftWidget)
 
@@ -110,9 +120,41 @@ class PreviewUi(QMainWindow):
 
         mainWidget.setLayout(mainLayout)
         self.setCentralWidget(mainWidget)
+        self.setWindowTitle(WINDOW_TITLE)
 
-        # TODO: Loop that actually talks to the HAL -- it can probably just be a QTimer
+        # TODO: Loop that actually talks to the HAL -- it can probably just be a QTimer connected to `capture`
+
+    @Slot(None)
+    def capture(self):
+        flashes = []
+        for colorName, widget in self.durationNumbers.items():
+            duration_ms = int(widget.text())
+            if duration_ms > 0:
+                flashes.append({
+                    "led": colorName,
+                    "duration_ms": duration_ms
+                })
+
+        if not self.hal:
+            print("Mock mode, not capturing an image")
+            print("Flashes would have contained:", flashes)
+            return
+
         # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
+        self.hal.run_command({
+            "command": "run_image_sequence",
+            "sequence": {
+                "label": "Preview sequence",
+                "images": [
+                    {
+                        "label": "Preview image",
+                        "flashes": flashes,
+                        # TODO: Retrieve the selected filter from the UI
+                        "filter": "any_filter"
+                    }
+                ]
+            }
+        })
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

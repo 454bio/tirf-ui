@@ -143,16 +143,19 @@ class PreviewUi(QMainWindow):
         # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
         self.hal.run_command({
             "command": "run_image_sequence",
-            "sequence": {
-                "label": "Preview sequence",
-                "images": [
-                    {
-                        "label": "Preview image",
-                        "flashes": flashes,
-                        # TODO: Retrieve the selected filter from the UI
-                        "filter": "any_filter"
-                    }
-                ]
+            "args": {
+                "sequence": {
+                    "label": "Preview sequence",
+                    "schema_version": 0,
+                    "images": [
+                        {
+                            "label": "Preview image",
+                            "flashes": flashes,
+                            # TODO: Retrieve the selected filter from the UI
+                            "filter": "any_filter"
+                        }
+                    ]
+                }
             }
         })
 

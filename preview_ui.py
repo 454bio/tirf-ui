@@ -135,6 +135,10 @@ class PreviewUi(QMainWindow):
                     "duration_ms": duration_ms
                 })
 
+        if not flashes:
+            print("No flashes configured, not capturing")
+            return
+
         if not self.hal:
             print("Mock mode, not capturing an image")
             print("Flashes would have contained:", flashes)

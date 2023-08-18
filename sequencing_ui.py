@@ -204,7 +204,7 @@ class SequencingUi(QMainWindow):
             halMetadata = self.protocolThread.hal.run_command({
                 "command": "get_metadata",
                 "args": {}
-            }, None)
+            })
             statusBarText.append(f"Connected to unit {halMetadata['serial_number']}")
             statusBarText.append(f"HAL version {halMetadata['hal_version']}")
         else:
@@ -264,10 +264,13 @@ class SequencingUi(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     ui = SequencingUi()
-    promptApi = PromptApi(ui)
     ui.show()
 
-    if HAL_PATH is None or not HAL_PATH.is_socket():
+    if HAL_PATH is not None and HAL_PATH.is_socket():
+        # Only need the prompt API if we're connecting to a HAL.
+        promptApi = PromptApi(ui)
+    else:
+        # Otherwise, we're in mock mode. Make it obvious.
         print(MOCK_WARNING_TEXT)
         QErrorMessage.qtHandler().showMessage(MOCK_WARNING_TEXT)
 

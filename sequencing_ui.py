@@ -227,7 +227,10 @@ class SequencingUi(QMainWindow):
 
     def finished(self):
         if self.protocolThread.hal is not None:
-            self.protocolThread.hal.disable_heater(self.protocolThread)
+            try:
+                self.protocolThread.hal.disable_heater(self.protocolThread)
+            except Exception as e:
+                self.error((type(e), e, ""))
 
         self.stopButton.setEnabled(False)
         self.startButton.setEnabled(True)

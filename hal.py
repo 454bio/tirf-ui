@@ -23,7 +23,7 @@ class Hal:
     """Simple wrapper to send commands to the HAL."""
     socket_path: str
 
-    def run_command(self, command: Dict, thread=None) -> Dict:
+    def run_command(self, command: Dict, thread=None, tries=float("inf")) -> Dict:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
             s.connect(self.socket_path)
 
@@ -35,16 +35,20 @@ class Hal:
             # If we're in a QThread, periodically check if we need to stop
             # TODO: There's probably a better way to do this
             if thread is not None:
+                try_count = 0
                 s.settimeout(SOCKET_POLL_PERIOD)
-                while not thread.isInterruptionRequested():
+                while not thread.isInterruptionRequested() and try_count < tries:
                     try:
                         response_raw = s.recv(MAX_RESPONSE_SIZE)
                         break
                     except socket.timeout:
+                        try_count += 1
                         pass
                 else:
-                    # Interrupted, don't bother trying to parse
-                    return {}
+                    if try_count >= tries:
+                        raise TimeoutError("HAL took too long to respond")
+                    else:
+                        return {}
             else:
                 response_raw = s.recv(MAX_RESPONSE_SIZE)
             response = json.loads(response_raw.decode(ENCODING))
@@ -59,7 +63,7 @@ class Hal:
                 self.run_command({
                     "command": "disable_heater",
                     "args": {}
-                }, thread)
+                }, thread, tries=1)
                 break
             except Exception as e:
                 print(e)

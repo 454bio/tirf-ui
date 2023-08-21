@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Path=/home/bio454/454/ui/
+Exec=/usr/bin/python sequencing_ui.py
+Terminal=false
+Name=454 Sequencing

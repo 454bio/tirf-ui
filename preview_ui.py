@@ -1,4 +1,5 @@
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -55,16 +56,18 @@ class PreviewUi(QMainWindow):
         if PREVIEW_PATH is not None and PREVIEW_PATH.is_socket():
             previewWidget = PreviewWidget(PREVIEW_PATH)
 
+        self.startButtons: List[QPushButton] = []
+
         # Generate the controls for each LED.
         # This cannot be rolled into the `for` loop below because Python's late-binding will result in the connections being crossed.
-        def make_led_controls(colorName: str) -> List[QWidget]:
+        def make_led_controls(colorName: str, text: Optional[str] = None, maxTimeMs=cameraShutterTimeMs) -> List[QWidget]:
             # TODO: Make some part of this the corresponding color
             widgets: List[QWidget] = []
-            widgets.append(QLabel(colorName.capitalize()))
+            widgets.append(QLabel(text if text is not None else colorName.capitalize()))
 
             durationSlider = QSlider(Qt.Horizontal)
             widgets.append(durationSlider)
-            durationSlider.setRange(0, cameraShutterTimeMs)
+            durationSlider.setRange(0, maxTimeMs)
 
             durationNumber = QLineEdit()
             widgets.append(durationNumber)
@@ -101,6 +104,21 @@ class PreviewUi(QMainWindow):
 
         captureNowButton = QPushButton("Capture")
         captureNowButton.clicked.connect(self.capture)
+        self.startButtons.append(captureNowButton)
+
+        uvCleavingControlsLayout = QGridLayout()
+        for widgetIndex, widget in enumerate(make_led_controls("uv", text="UV Cleaving", maxTimeMs=10000)):
+            if isinstance(widget, QLineEdit):
+                # Hold on to the text input so we can retrieve their values on `cleave()`.
+                # TODO: Will need a different way of doing this if there is ever another QLineEdit here
+                self.cleavingNumber: QLineEdit = widget
+            uvCleavingControlsLayout.addWidget(widget, 0, widgetIndex)
+        uvCleavingControlsWidget = QWidget()
+        uvCleavingControlsWidget.setLayout(uvCleavingControlsLayout)
+
+        cleaveButton = QPushButton("Cleave")
+        cleaveButton.clicked.connect(self.cleave)
+        self.startButtons.append(cleaveButton)
 
         # Lay them out.
         mainWidget = QWidget()
@@ -112,6 +130,8 @@ class PreviewUi(QMainWindow):
         if filterServoPicker:
             leftWidget.addWidget(filterServoPicker)
         leftLayout.addWidget(captureNowButton)
+        leftLayout.addWidget(uvCleavingControlsWidget)
+        leftLayout.addWidget(cleaveButton)
         leftWidget.setLayout(leftLayout)
         mainLayout.addWidget(leftWidget)
 
@@ -124,44 +144,91 @@ class PreviewUi(QMainWindow):
 
         # TODO: Loop that actually talks to the HAL -- it can probably just be a QTimer connected to `capture`
 
+    def setStartButtonsEnabled(self, enable: bool):
+        for button in self.startButtons:
+            button.setEnabled(enable)
+
     @Slot(None)
     def capture(self):
-        flashes = []
-        for colorName, widget in self.durationNumbers.items():
-            duration_ms = int(widget.text())
-            if duration_ms > 0:
-                flashes.append({
-                    "led": colorName,
-                    "duration_ms": duration_ms
-                })
+        try:
+            self.setStartButtonsEnabled(False)
 
-        if not flashes:
-            print("No flashes configured, not capturing")
-            return
+            flashes = []
+            for colorName, widget in self.durationNumbers.items():
+                duration_ms = int(widget.text())
+                if duration_ms > 0:
+                    flashes.append({
+                        "led": colorName,
+                        "duration_ms": duration_ms
+                    })
 
-        if not self.hal:
-            print("Mock mode, not capturing an image")
-            print("Flashes would have contained:", flashes)
-            return
+            if not flashes:
+                print("No flashes configured, not capturing")
+                return
 
-        # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
-        self.hal.run_command({
-            "command": "run_image_sequence",
-            "args": {
-                "sequence": {
-                    "label": "Preview sequence",
-                    "schema_version": 0,
-                    "images": [
-                        {
-                            "label": "Preview image",
-                            "flashes": flashes,
-                            # TODO: Retrieve the selected filter from the UI
-                            "filter": "any_filter"
-                        }
-                    ]
+            if not self.hal:
+                print("Mock mode, not capturing an image")
+                print("Flashes would have contained:", flashes)
+                print("Delay to test UI")
+                time.sleep(1)
+                return
+
+            # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
+            self.hal.run_command({
+                "command": "run_image_sequence",
+                "args": {
+                    "sequence": {
+                        "label": "Preview sequence",
+                        "schema_version": 0,
+                        "images": [
+                            {
+                                "label": "Preview image",
+                                "flashes": flashes,
+                                # TODO: Retrieve the selected filter from the UI
+                                "filter": "any_filter"
+                            }
+                        ]
+                    }
                 }
-            }
-        })
+            })
+        except Exception as e:
+            print(e)
+        finally:
+            self.setStartButtonsEnabled(True)
+
+    @Slot(None)
+    def cleave(self):
+        try:
+            self.setStartButtonsEnabled(False)
+
+            cleavingDurationMs = int(self.cleavingNumber.text())
+
+            if not cleavingDurationMs:
+                print("Cleaving duration == 0, not cleaving")
+                return
+
+            if not self.hal:
+                print("Mock mode, not cleaving")
+                print("Would have cleaved for:", cleavingDurationMs)
+                print("Delay to test UI")
+                time.sleep(1)
+                return
+
+            # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
+            self.hal.run_command({
+                "command": "cleave",
+                "args": {
+                    "cleave_args": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": cleavingDurationMs
+                    }
+                }
+            })
+        except Exception as e:
+            print(e)
+        finally:
+            self.setStartButtonsEnabled(True)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

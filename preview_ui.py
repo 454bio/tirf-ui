@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtGui import QIntValidator
+from PySide2.QtGui import QGuiApplication, QCursor, QIntValidator
 from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from hal import boost_bool, Hal
@@ -145,6 +145,11 @@ class PreviewUi(QMainWindow):
         # TODO: Loop that actually talks to the HAL -- it can probably just be a QTimer connected to `capture`
 
     def setStartButtonsEnabled(self, enable: bool):
+        if enable:
+            QGuiApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        else:
+            QGuiApplication.restoreOverrideCursor()
+
         for button in self.startButtons:
             button.setEnabled(enable)
 

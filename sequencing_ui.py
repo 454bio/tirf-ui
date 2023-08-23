@@ -1,9 +1,10 @@
+import enum
 import json
 import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
@@ -24,8 +25,16 @@ OUTPUT_DIR_ROOT = Path.home() / "454" / "output"
 
 MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
 
+class SequencingProtocolStatus(enum.Enum):
+    NEED_PROTOCOL = "Open a protocol to begin"
+    READY = "Ready to run"
+    RUNNING = "Protocol running"
+    STOPPED = "Protocol stopped"
+    FAILED = "Protocol failed"
+    COMPLETED = "Protocol completed"
+
 class ProtocolThread(QThread):
-    finished = Signal()
+    finished = Signal(SequencingProtocolStatus)
     error = Signal(tuple)
     progress = Signal(RunContext)
 
@@ -43,17 +52,22 @@ class ProtocolThread(QThread):
     def run(self):
         protocol = self.protocol
         output_dir = OUTPUT_DIR_ROOT / datetime.now().isoformat()
+        result = SequencingProtocolStatus.COMPLETED
         if protocol is not None:
             try:
                 protocol.event_run_callback = self.eventRunCallback
                 protocol.run(RunContext([RunContextNode(protocol)], output_dir, self.hal, self))
-            except:
+            except Exception as e:
                 traceback.print_exc()
                 exctype, value = sys.exc_info()[:2]
                 self.error.emit((exctype, value, traceback.format_exc()))
+                if exctype is InterruptedError:
+                    result = SequencingProtocolStatus.STOPPED
+                else:
+                    result = SequencingProtocolStatus.FAILED
             finally:
                 protocol.event_run_callback = None
-                self.finished.emit()
+                self.finished.emit(result)
 
     def eventRunCallback(self, context: RunContext):
         self.progress.emit(context)
@@ -199,22 +213,35 @@ class SequencingUi(QMainWindow):
         self.setCentralWidget(mainWidget)
         self.setWindowTitle(WINDOW_TITLE_BASE)
 
+        # Holder for dynamic status bar widgets (placed on the left)
+        self.statusWidgets: Dict[str, QLabel] = {}
+        self.updateStatusWidget("status", QLabel(SequencingProtocolStatus.NEED_PROTOCOL.value))
+
+        # Holder for static status bar widgets (placed on the right)
         statusBarText = [f"GUI version {VERSION}"]
         if self.protocolThread.hal is not None:
             halMetadata = self.protocolThread.hal.run_command({
                 "command": "get_metadata",
                 "args": {}
             })
-            statusBarText.append(f"Connected to unit {halMetadata['serial_number']}")
+            statusBarText.append(f"Connected to unit {halMetadata['serial_number'][-8:]}")
             statusBarText.append(f"HAL version {halMetadata['hal_version']}")
         else:
             statusBarText.append("Mock mode (no HAL)")
-        statusBar = self.statusBar()
         for text in statusBarText:
-            statusBar.addPermanentWidget(QLabel(text))
+            self.statusBar().addPermanentWidget(QLabel(text))
 
         self.stop()
         self.startButton.setEnabled(False)
+
+    def updateStatusWidget(self, name: str, text: str):
+        widget = self.statusWidgets.get(name)
+        if widget:
+            widget.setText(text)
+        else:
+            widget = QLabel(text)
+            self.statusWidgets[name] = widget
+            self.statusBar().addWidget(widget)
 
     def stop(self):
         self.stopButton.setEnabled(False)
@@ -225,13 +252,14 @@ class SequencingUi(QMainWindow):
         if exception_type is not InterruptedError:
             QErrorMessage.qtHandler().showMessage(f"{exception_type.__name__}: {str(exception)}")
 
-    def finished(self):
+    def finished(self, result: SequencingProtocolStatus):
         if self.protocolThread.hal is not None:
             try:
                 self.protocolThread.hal.disable_heater(self.protocolThread)
             except Exception as e:
                 self.error((type(e), e, ""))
 
+        self.updateStatusWidget("status", result.value)
         self.stopButton.setEnabled(False)
         self.startButton.setEnabled(True)
         self.openAction.setEnabled(True)
@@ -240,6 +268,7 @@ class SequencingUi(QMainWindow):
         self.stopButton.setEnabled(True)
         self.startButton.setEnabled(False)
         self.openAction.setEnabled(False)
+        self.updateStatusWidget("status", SequencingProtocolStatus.RUNNING.value)
         self.protocolThread.start()
 
     def open(self):
@@ -264,6 +293,8 @@ class SequencingUi(QMainWindow):
         self.startButton.setEnabled(True)
         self.setWindowTitle(f"{Path(path).name} - {WINDOW_TITLE_BASE}")
 
+        self.updateStatusWidget("status", SequencingProtocolStatus.READY.value)
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     ui = SequencingUi()
@@ -272,6 +303,8 @@ if __name__ == "__main__":
     if HAL_PATH is not None and HAL_PATH.is_socket():
         # Only need the prompt API if we're connecting to a HAL.
         promptApi = PromptApi(ui)
+        # TODO: PromptApi should emit something that can be connected to updateStatusWidget
+        # Temperature, etc.
     else:
         # Otherwise, we're in mock mode. Make it obvious.
         print(MOCK_WARNING_TEXT)

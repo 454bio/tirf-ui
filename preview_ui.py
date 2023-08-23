@@ -240,11 +240,8 @@ if __name__ == "__main__":
     ui = PreviewUi()
     ui.show()
 
-    if ui.hal is not None:
-        # Only need the prompt API if we're connecting to a HAL.
-        promptApi = PromptApi(ui)
-    else:
-        # Otherwise, we're in mock mode. Make it obvious.
+    if ui.hal is None:
+        # We're in mock mode. Make it obvious.
         print(MOCK_WARNING_TEXT)
         QErrorMessage.qtHandler().showMessage(MOCK_WARNING_TEXT)
 

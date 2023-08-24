@@ -256,8 +256,23 @@ class SequencingUi(QMainWindow):
         status_message_str = s.readData(MAX_STATUS_MESSAGE_SIZE)
         status = json.loads(status_message_str)
 
-        # Just feed it straight to the widgets -- neither we nor the HAL care about errors here.
-        self.updateStatusWidget(**status)
+        success = True
+        error = None
+        try:
+            self.updateStatusWidget(**status)
+        except Exception as e:
+            success = False
+            error = str(e)
+
+        response = {
+            "success": success,
+            "error": error
+        }
+        try:
+            s.write(json.dumps(response).encode(ENCODING))
+        except Exception as e:
+            print(f"Unable to write status response")
+            print(e)
 
     def updateStatusWidget(self, name: str, text: str):
         widget = self.statusWidgets.get(name)

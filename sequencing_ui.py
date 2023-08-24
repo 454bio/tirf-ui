@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple
 
 from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
+from PySide2.QtNetwork import QLocalServer
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel
 
 from preview_widget import PreviewWidget
@@ -21,7 +22,11 @@ MARGIN_BETWEEN_EVENTS = 12
 
 HAL_PATH: Optional[Path] = Path("/454/api")
 PREVIEW_PATH: Optional[Path] = Path("/454/preview")
+STATUS_PATH: Optional[Path] = Path("/454/hal-status")
 OUTPUT_DIR_ROOT = Path.home() / "454" / "output"
+
+MAX_STATUS_WAIT_MS = 100
+MAX_STATUS_MESSAGE_SIZE = 1 << 10
 
 MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
 
@@ -217,6 +222,15 @@ class SequencingUi(QMainWindow):
         self.statusWidgets: Dict[str, QLabel] = {}
         self.updateStatusWidget("status", QLabel(SequencingProtocolStatus.NEED_PROTOCOL.value))
 
+        # Server for dynamic status bar widgets
+        self.statusServer = QLocalServer(self)
+        if STATUS_PATH is not None and self.protocolThread.hal is not None:
+            self.statusServer.newConnection.connect(self.handleStatusConnection)
+            STATUS_PATH.unlink(missing_ok=True)
+            if not self.statusServer.listen(str(STATUS_PATH)):
+                raise Exception("Could not start status server")
+            STATUS_PATH.chmod(777)
+
         # Holder for static status bar widgets (placed on the right)
         statusBarText = [f"GUI version {VERSION}"]
         if self.protocolThread.hal is not None:
@@ -233,6 +247,17 @@ class SequencingUi(QMainWindow):
 
         self.stop()
         self.startButton.setEnabled(False)
+
+    def handleStatusConnection(self):
+        s = self.statusServer.nextPendingConnection()
+        if not s.waitForReadyRead(MAX_STATUS_WAIT_MS):
+            raise TimeoutError
+        
+        status_message_str = s.readData(MAX_STATUS_MESSAGE_SIZE)
+        status = json.loads(status_message_str)
+
+        # Just feed it straight to the widgets -- neither we nor the HAL care about errors here.
+        self.updateStatusWidget(**status)
 
     def updateStatusWidget(self, name: str, text: str):
         widget = self.statusWidgets.get(name)

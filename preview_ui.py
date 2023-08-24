@@ -9,7 +9,6 @@ from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLay
 
 from hal import boost_bool, Hal
 from preview_widget import PreviewWidget
-from user_prompts import PromptApi
 from version import VERSION
 
 WINDOW_TITLE = "454 Image Preview"

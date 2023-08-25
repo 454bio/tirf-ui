@@ -139,7 +139,7 @@ class ReactionCycle(Event):
     def gui_details(self, context: Optional[RunContext] = None) -> str:
         cleave_duration_s = self.cleaving["cleaving_duration_ms"] / 1000
         if context is None:
-            return f"{self.iterations} iterations, {len(self) - 1} children, then cleave for {cleave_duration_s} s:"
+            return f"{self.iterations} iterations, {len(self) - 1} children, then cleave for {cleave_duration_s} seconds:"
 
         # Find the corresponding node so we can display which iteration we're on.
         # Yes, this is O(n) in the length of the path.
@@ -155,9 +155,9 @@ class ReactionCycle(Event):
 
         if my_node.step_index is None:
             # Running the cleaving step
-            return f"Cleaving for {cleave_duration_s} s in iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children:"
+            return f"Cleaving for {cleave_duration_s} seconds in iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children:"
         else:
-            return f"Running iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children, then cleave for {cleave_duration_s} s:"
+            return f"Running iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children, then cleave for {cleave_duration_s} seconds:"
 
 @dataclass
 class Group(Event):
@@ -261,7 +261,7 @@ class SetTemperature(Event):
         }, context.thread)
 
     def gui_details(self, context: Optional[RunContext] = None) -> str:
-        return f"Wait until {self.set_temperature_args['temperature_kelvin'] - 273.15}º C"
+        return f"Wait until {self.set_temperature_args['temperature_kelvin'] - 273.15} ºC"
 
 @dataclass
 class Wait(Event):

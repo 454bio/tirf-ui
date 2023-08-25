@@ -36,7 +36,7 @@ class PreviewUi(QMainWindow):
                 "command": "get_metadata",
                 "args": {}
             })
-            permanentStatusBarText.append(f"Unit {halMetadata['serial_number']}")
+            permanentStatusBarText.append(f"Unit {halMetadata['serial_number'][-8:]}")
             permanentStatusBarText.append(f"HAL v{halMetadata['hal_version']}")
             filterServoControl = boost_bool(halMetadata["filter_servo_control"])
             cameraOptions = halMetadata.get("camera_options")
@@ -144,11 +144,6 @@ class PreviewUi(QMainWindow):
         # TODO: Loop that actually talks to the HAL -- it can probably just be a QTimer connected to `capture`
 
     def setStartButtonsEnabled(self, enable: bool):
-        if enable:
-            QGuiApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-        else:
-            QGuiApplication.restoreOverrideCursor()
-
         for button in self.startButtons:
             button.setEnabled(enable)
 

@@ -27,6 +27,7 @@ OUTPUT_DIR_ROOT = Path.home() / "454" / "output"
 
 MAX_STATUS_WAIT_MS = 100
 MAX_STATUS_MESSAGE_SIZE = 1 << 10
+ENCODING = "utf-8"
 
 MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
 
@@ -248,6 +249,7 @@ class SequencingUi(QMainWindow):
         self.stop()
         self.startButton.setEnabled(False)
 
+    @Slot(None)
     def handleStatusConnection(self):
         s = self.statusServer.nextPendingConnection()
         if not s.waitForReadyRead(MAX_STATUS_WAIT_MS):
@@ -343,8 +345,6 @@ if __name__ == "__main__":
     if HAL_PATH is not None and HAL_PATH.is_socket():
         # Only need the prompt API if we're connecting to a HAL.
         promptApi = PromptApi(ui)
-        # TODO: PromptApi should emit something that can be connected to updateStatusWidget
-        # Temperature, etc.
     else:
         # Otherwise, we're in mock mode. Make it obvious.
         print(MOCK_WARNING_TEXT)

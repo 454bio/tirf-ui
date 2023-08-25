@@ -221,7 +221,7 @@ class SequencingUi(QMainWindow):
 
         # Holder for dynamic status bar widgets (placed on the left)
         self.statusWidgets: Dict[str, QLabel] = {}
-        self.updateStatusWidget("status", QLabel(SequencingProtocolStatus.NEED_PROTOCOL.value))
+        self.updateStatusWidget("status", SequencingProtocolStatus.NEED_PROTOCOL.value)
 
         # Server for dynamic status bar widgets
         self.statusServer = QLocalServer(self)
@@ -233,14 +233,14 @@ class SequencingUi(QMainWindow):
             STATUS_PATH.chmod(777)
 
         # Holder for static status bar widgets (placed on the right)
-        statusBarText = [f"GUI version {VERSION}"]
+        statusBarText = [f"GUI v{VERSION}"]
         if self.protocolThread.hal is not None:
             halMetadata = self.protocolThread.hal.run_command({
                 "command": "get_metadata",
                 "args": {}
             })
-            statusBarText.append(f"Connected to unit {halMetadata['serial_number'][-8:]}")
-            statusBarText.append(f"HAL version {halMetadata['hal_version']}")
+            statusBarText.append(f"Unit {halMetadata['serial_number'][-8:]}")
+            statusBarText.append(f"HAL v{halMetadata['hal_version']}")
         else:
             statusBarText.append("Mock mode (no HAL)")
         for text in statusBarText:

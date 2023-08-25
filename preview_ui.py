@@ -29,15 +29,15 @@ class PreviewUi(QMainWindow):
 
         # Get the HAL and populate the status bar.
         statusBarText: List[str] = []
-        permanentStatusBarText: List[str] = [f"GUI version {VERSION}"]
+        permanentStatusBarText: List[str] = [f"GUI v{VERSION}"]
         if HAL_PATH is not None and HAL_PATH.is_socket():
             self.hal = Hal(str(HAL_PATH))
             halMetadata = self.hal.run_command({
                 "command": "get_metadata",
                 "args": {}
             })
-            permanentStatusBarText.append(f"Connected to unit {halMetadata['serial_number']}")
-            permanentStatusBarText.append(f"HAL version {halMetadata['hal_version']}")
+            permanentStatusBarText.append(f"Unit {halMetadata['serial_number']}")
+            permanentStatusBarText.append(f"HAL v{halMetadata['hal_version']}")
             filterServoControl = boost_bool(halMetadata["filter_servo_control"])
             cameraOptions = halMetadata.get("camera_options")
             if cameraOptions:

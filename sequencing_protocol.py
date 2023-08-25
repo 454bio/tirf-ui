@@ -292,7 +292,10 @@ class Wait(Event):
         print()
 
     def gui_details(self, context: Optional[RunContext] = None) -> Optional[str]:
-        return f"{self.duration_ms / 1000} seconds"
+        mins, msecs = divmod(self.duration_ms, 60000)
+        mins_str = f"{mins} minutes" if mins else ""
+        secs_str = f"{msecs / 1000} seconds" if msecs else ""
+        return " ".join(filter(bool, [mins_str, secs_str]))
 
 SEQUENCING_PROTOCOL_SCHEMA_PATH = "sequencing_protocol_schema.json"
 with open(SEQUENCING_PROTOCOL_SCHEMA_PATH) as schema_file:

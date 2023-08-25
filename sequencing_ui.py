@@ -1,12 +1,13 @@
 import enum
 import json
 import sys
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from PySide2.QtCore import Signal, Slot, QThread
+from PySide2.QtCore import Signal, Slot, QThread, QTimer
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
 from PySide2.QtNetwork import QLocalServer
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel
@@ -86,7 +87,11 @@ class ProtocolViewer(QTextEdit):
 
         self.eventTextBlocks: List[Tuple[QTextBlock, Optional[QTextBlock]]] = []
         self.lastContext: Optional[RunContext] = None
-    
+
+        self.reformatTimer = QTimer(self)
+        self.reformatTimer.setInterval(1000)
+        self.reformatTimer.timeout.connect(self.reformatLastContext)
+
     @staticmethod
     def makeBlockFormats(depth: int) -> Tuple[QTextBlockFormat, QTextBlockFormat]:
         eventFormat = QTextBlockFormat()
@@ -144,7 +149,8 @@ class ProtocolViewer(QTextEdit):
                 newText: Optional[str] = None
                 if line_index == 1:
                     # Details line may change to indicate things like what iteration is running.
-                    newText = event.gui_details(context)
+                    mins, secs = divmod(int(time.time() - node.start_time), 60)
+                    newText = f"{mins}:{secs:02}: {event.gui_details(context)}"
 
                 cursor = QTextCursor(line)
                 cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
@@ -152,6 +158,12 @@ class ProtocolViewer(QTextEdit):
                 cursor.setBlockFormat(blockFormat)
                 if newText:
                     cursor.insertText(newText)
+
+
+    @Slot(None)
+    def reformatLastContext(self):
+        if self.lastContext is not None:
+            self.formatLine(self.lastContext, active=True)
 
     @Slot(RunContext)
     def progress(self, context: RunContext):
@@ -296,6 +308,8 @@ class SequencingUi(QMainWindow):
             QErrorMessage.qtHandler().showMessage(f"{exception_type.__name__}: {str(exception)}")
 
     def finished(self, result: SequencingProtocolStatus):
+        self.protocolViewer.reformatTimer.stop()
+
         if self.protocolThread.hal is not None:
             try:
                 self.protocolThread.hal.disable_heater(self.protocolThread)
@@ -313,6 +327,7 @@ class SequencingUi(QMainWindow):
         self.openAction.setEnabled(False)
         self.updateStatusWidget("status", SequencingProtocolStatus.RUNNING.value)
         self.protocolThread.start()
+        self.protocolViewer.reformatTimer.start()
 
     def open(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open sequencing protocol", PROTOCOLS_DIR, "Sequencing protocols (*.454sp.json)")

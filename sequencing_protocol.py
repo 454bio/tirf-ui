@@ -18,6 +18,9 @@ class RunContextNode:
     step_index: Optional[int] = None
     iteration: Optional[int] = None
 
+    def __post_init__(self):
+        self.start_time = time.time()
+
     def __str__(self) -> str:
         output = f"{type(self.event).__name__}"
         if self.iteration is not None:
@@ -271,12 +274,6 @@ class Wait(Event):
     def run(self, context: RunContext):
         super().run(context)
         print(f"Waiting {self.duration_ms} ms")
-
-        if not context.hal:
-            print(f"Wait skipped -- `mock = True`\n")
-            # Delay so we can actually see what's going on in a mock run
-            time.sleep(1)
-            return
 
         # If we're in a QThread, periodically check if we need to stop
         # TODO: There's probably a better way to do this

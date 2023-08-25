@@ -153,6 +153,7 @@ class ProtocolViewer(QTextEdit):
                 if newText:
                     cursor.insertText(newText)
 
+    @Slot(RunContext)
     def progress(self, context: RunContext):
         if self.lastContext is not None:
             self.formatLine(self.lastContext, active=False)

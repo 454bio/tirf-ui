@@ -137,8 +137,9 @@ class ReactionCycle(Event):
                 yield node
     
     def gui_details(self, context: Optional[RunContext] = None) -> str:
+        cleave_duration_s = self.cleaving["cleaving_duration_ms"] / 1000
         if context is None:
-            return f"{self.iterations} iterations, {len(self) - 1} children:"
+            return f"{self.iterations} iterations, {len(self) - 1} children, then cleave for {cleave_duration_s} s:"
 
         # Find the corresponding node so we can display which iteration we're on.
         # Yes, this is O(n) in the length of the path.
@@ -154,9 +155,9 @@ class ReactionCycle(Event):
 
         if my_node.step_index is None:
             # Running the cleaving step
-            return f"Cleaving in iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children:"
+            return f"Cleaving for {cleave_duration_s} s in iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children:"
         else:
-            return f"Running iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children:"
+            return f"Running iteration {my_node.iteration+1} of {self.iterations}, {len(self) - 1} children, then cleave for {cleave_duration_s} s:"
 
 @dataclass
 class Group(Event):

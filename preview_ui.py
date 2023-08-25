@@ -24,8 +24,7 @@ class PreviewUi(QMainWindow):
 
         # Whether we can control the filter programmatically. Assume False until we can ask the HAL.
         filterServoControl = False
-        # This is only used to place an upper limit on the LED flash duration, so pick a default in case we can't get one from the HAL.
-        cameraShutterTimeMs = 15000
+        maxLedFlashMs = 5000
 
         # Get the HAL and populate the status bar.
         statusBarText: List[str] = []
@@ -41,8 +40,8 @@ class PreviewUi(QMainWindow):
             filterServoControl = boost_bool(halMetadata["filter_servo_control"])
             cameraOptions = halMetadata.get("camera_options")
             if cameraOptions:
-                cameraShutterTimeMs = int(cameraOptions["shutter_time_ms"])
-                statusBarText.append(f"Shutter time {cameraShutterTimeMs} ms")
+                maxLedFlashMs = int(cameraOptions["shutter_time_ms"])
+                statusBarText.append(f"Shutter time {maxLedFlashMs} ms")
         else:
             permanentStatusBarText.append("Mock mode (no HAL)")
         statusBar = self.statusBar()
@@ -59,7 +58,7 @@ class PreviewUi(QMainWindow):
 
         # Generate the controls for each LED.
         # This cannot be rolled into the `for` loop below because Python's late-binding will result in the connections being crossed.
-        def make_led_controls(colorName: str, text: Optional[str] = None, maxTimeMs=cameraShutterTimeMs) -> List[QWidget]:
+        def make_led_controls(colorName: str, text: Optional[str] = None, maxTimeMs=maxLedFlashMs) -> List[QWidget]:
             # TODO: Make some part of this the corresponding color
             widgets: List[QWidget] = []
             widgets.append(QLabel(text if text is not None else colorName.capitalize()))

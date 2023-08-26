@@ -10,6 +10,7 @@ from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLay
 
 from hal import boost_bool, Hal
 from preview_widget import PreviewWidget
+from sequencing_protocol import MAX_TEMPERATURE_HOLD_S, MAX_TEMPERATURE_WAIT_S
 from version import VERSION
 
 WINDOW_TITLE = "454 Image Preview"
@@ -150,10 +151,10 @@ class PreviewUi(QMainWindow):
         self.startButtons.append(captureNowButton)
 
         # Temperature controls.
-        temperatureNumber = QLineEdit()
-        temperatureNumber.setMaximumWidth(50)
-        temperatureNumber.setValidator(QDoubleValidator())
-        temperatureNumber.setAlignment(Qt.AlignRight)
+        self.temperatureNumber = QLineEdit()
+        self.temperatureNumber.setMaximumWidth(50)
+        self.temperatureNumber.setValidator(QDoubleValidator())
+        self.temperatureNumber.setAlignment(Qt.AlignRight)
         heaterOnButton = QPushButton("Set")
         heaterOnButton.clicked.connect(self.setTemperature)
         heaterOffButton = QPushButton("Disable")
@@ -162,7 +163,7 @@ class PreviewUi(QMainWindow):
         self.startButtons.append(heaterOffButton)
         temperatureControlsLayout = QHBoxLayout()
         temperatureControlsLayout.addWidget(QLabel("Heater"))
-        temperatureControlsLayout.addWidget(temperatureNumber)
+        temperatureControlsLayout.addWidget(self.temperatureNumber)
         temperatureControlsLayout.addWidget(QLabel("ºC"))
         temperatureControlsLayout.addWidget(heaterOnButton)
         temperatureControlsLayout.addWidget(heaterOffButton)
@@ -274,13 +275,30 @@ class PreviewUi(QMainWindow):
 
     @Slot(None)
     def setTemperature(self):
-        # TODO: There's a lot of duplicated logic in these
-        # Need to start using a QThread for these anyway to avoid hanging the UI -- maybe the boilerplate can go in there somehow
-        pass
+        temperatureString = self.temperatureNumber.text()
+        if not temperatureString:
+            print("Temperature not specified, not setting")
+            return
+
+        temperatureKelvin = float(temperatureString) + 273.15
+
+        self.halThread.runCommand({
+            "command": "wait_for_temperature",
+            "args": {
+                "temperature_args": {
+                    "target_temperature_kelvin": temperatureKelvin,
+                    "wait_time_s": MAX_TEMPERATURE_WAIT_S,
+                    "hold_time_s": MAX_TEMPERATURE_HOLD_S
+                }
+            }
+        })
 
     @Slot(None)
     def disableHeater(self):
-        pass
+        self.halThread.runCommand({
+            "command": "disable_heater",
+            "args": {}
+        })
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

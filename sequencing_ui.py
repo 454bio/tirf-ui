@@ -83,7 +83,7 @@ class ProtocolViewer(QTextEdit):
     def __init__(self):
         super().__init__()
         self.setReadOnly(True)
-        self.setMinimumSize(500, 500)
+        self.setMinimumSize(600, 500)
 
         self.eventTextBlocks: List[Tuple[QTextBlock, Optional[QTextBlock]]] = []
         self.lastContext: Optional[RunContext] = None

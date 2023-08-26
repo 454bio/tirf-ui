@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PySide2.QtCore import Slot, QObject
 from PySide2.QtNetwork import QLocalServer
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout
+from PySide2.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
 
 ENCODING = "utf-8"
 MAX_REQUEST_SIZE = 1 << 10
@@ -11,8 +11,8 @@ MAX_READ_WAIT_MS = 100
 PROMPT_PATH = Path("/454/hal-message")
 
 class ConfirmationPrompt(QDialog):
-    def __init__(self, text: str):
-        super().__init__()
+    def __init__(self, parent: QWidget, text: str):
+        super().__init__(parent)
         label = QLabel()
         label.setText(text)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok)
@@ -49,7 +49,7 @@ class PromptApi(QObject):
         try:
             if command == "confirmation_prompt":
                 text = request["text"]
-                prompt = ConfirmationPrompt(text)
+                prompt = ConfirmationPrompt(self.parent(), text)
                 success = bool(prompt.exec_())
             else:
                 raise ValueError(f"Unknown command {command}")

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtGui import QIntValidator
+from PySide2.QtGui import QDoubleValidator, QIntValidator
 from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from hal import boost_bool, Hal
@@ -31,6 +31,7 @@ class PreviewUi(QMainWindow):
         permanentStatusBarText: List[str] = [f"GUI v{VERSION}"]
         if HAL_PATH is not None and HAL_PATH.is_socket():
             self.hal = Hal(str(HAL_PATH))
+            # TODO: This needs to be in a thread or something -- it's hanging the UI
             halMetadata = self.hal.run_command({
                 "command": "get_metadata",
                 "args": {}
@@ -104,19 +105,40 @@ class PreviewUi(QMainWindow):
         captureNowButton.clicked.connect(self.capture)
         self.startButtons.append(captureNowButton)
 
-        uvCleavingControlsLayout = QGridLayout()
-        for widgetIndex, widget in enumerate(make_led_controls("uv", text="UV Cleaving", maxTimeMs=10000)):
+        # Temperature controls.
+        temperatureNumber = QLineEdit()
+        temperatureNumber.setMaximumWidth(50)
+        temperatureNumber.setValidator(QDoubleValidator())
+        temperatureNumber.setAlignment(Qt.AlignRight)
+        heaterOnButton = QPushButton("Set")
+        heaterOnButton.clicked.connect(self.setTemperature)
+        heaterOffButton = QPushButton("Disable")
+        heaterOffButton.clicked.connect(self.disableHeater)
+        self.startButtons.append(heaterOnButton)
+        self.startButtons.append(heaterOffButton)
+        temperatureControlsLayout = QHBoxLayout()
+        temperatureControlsLayout.addWidget(QLabel("Heater"))
+        temperatureControlsLayout.addWidget(temperatureNumber)
+        temperatureControlsLayout.addWidget(QLabel("ºC"))
+        temperatureControlsLayout.addWidget(heaterOnButton)
+        temperatureControlsLayout.addWidget(heaterOffButton)
+        temperatureControlsWidget = QWidget()
+        temperatureControlsWidget.setLayout(temperatureControlsLayout)
+
+        # UV cleaving controls.
+        uvCleavingControlsLayout = QHBoxLayout()
+        for widget in make_led_controls("uv", text="UV", maxTimeMs=5000):
             if isinstance(widget, QLineEdit):
                 # Hold on to the text input so we can retrieve their values on `cleave()`.
                 # TODO: Will need a different way of doing this if there is ever another QLineEdit here
                 self.cleavingNumber: QLineEdit = widget
-            uvCleavingControlsLayout.addWidget(widget, 0, widgetIndex)
-        uvCleavingControlsWidget = QWidget()
-        uvCleavingControlsWidget.setLayout(uvCleavingControlsLayout)
-
+            uvCleavingControlsLayout.addWidget(widget)
         cleaveButton = QPushButton("Cleave")
         cleaveButton.clicked.connect(self.cleave)
         self.startButtons.append(cleaveButton)
+        uvCleavingControlsLayout.addWidget(cleaveButton)
+        uvCleavingControlsWidget = QWidget()
+        uvCleavingControlsWidget.setLayout(uvCleavingControlsLayout)
 
         # Lay them out.
         mainWidget = QWidget()
@@ -128,8 +150,8 @@ class PreviewUi(QMainWindow):
         if filterServoPicker:
             leftWidget.addWidget(filterServoPicker)
         leftLayout.addWidget(captureNowButton)
+        leftLayout.addWidget(temperatureControlsWidget)
         leftLayout.addWidget(uvCleavingControlsWidget)
-        leftLayout.addWidget(cleaveButton)
         leftWidget.setLayout(leftLayout)
         mainLayout.addWidget(leftWidget)
 
@@ -227,6 +249,16 @@ class PreviewUi(QMainWindow):
             print(e)
         finally:
             self.setStartButtonsEnabled(True)
+
+    @Slot(None):
+    def setTemperature(self):
+        # TODO: There's a lot of duplicated logic in these
+        # Need to start using a QThread for these anyway to avoid hanging the UI -- maybe the boilerplate can go in there somehow
+        pass
+
+    @Slot(None):
+    def disableHeater(self):
+        pass
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

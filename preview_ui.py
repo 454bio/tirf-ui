@@ -97,6 +97,9 @@ class PreviewUi(QMainWindow):
             previewWidget = PreviewWidget(PREVIEW_PATH)
 
         self.startButtons: List[QPushButton] = []
+        self.stopButton = QPushButton("Cancel")
+        self.stopButton.clicked.connect(self.halThread.requestInterruption)
+        statusBar.addWidget(self.stopButton)
 
         # Generate the controls for each LED.
         # This cannot be rolled into the `for` loop below because Python's late-binding will result in the connections being crossed.
@@ -205,10 +208,13 @@ class PreviewUi(QMainWindow):
 
         self.halThread.started.connect(partial(self.setStartButtonsEnabled, False))
         self.halThread.finished.connect(partial(self.setStartButtonsEnabled, True))
+        self.setStartButtonsEnabled(True)
 
         # TODO: Loop that actually talks to the HAL -- it can probably just be a QTimer connected to `capture`
 
     def setStartButtonsEnabled(self, running: bool):
+        self.stopButton.setEnabled(not running)
+
         for button in self.startButtons:
             button.setEnabled(running)
 

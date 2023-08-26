@@ -1,9 +1,10 @@
 import sys
 import time
+from functools import partial
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Slot, QThread, Qt
 from PySide2.QtGui import QDoubleValidator, QIntValidator
 from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPushButton, QSlider, QVBoxLayout, QWidget
 
@@ -16,11 +17,51 @@ HAL_PATH: Optional[Path] = Path("/454/api")
 PREVIEW_PATH: Optional[Path] = Path("/454/preview")
 MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
 
+class HalThread(QThread):
+    def __init__(self):
+        super().__init__()
+        self.command: Optional[Dict] = None
+        self.hal: Optional[Hal] = None
+
+        # Create the HAL iff there's a socket we can connect to.
+        # Otherwise, run in mock mode.
+        if HAL_PATH is not None and HAL_PATH.is_socket():
+            self.hal = Hal(str(HAL_PATH))
+
+    def runCommand(self, command: Dict):
+        self.command = command
+        if self.isRunning():
+            raise Exception("Command is still running")
+
+        self.start()
+
+    @Slot(None)
+    def run(self):
+        command = self.command
+        if command is None:
+            raise Exception("run called without a command")
+
+        self.command = None
+
+        print(command)
+
+        if self.hal is None:
+            print("Mock mode, not running the command")
+            time.sleep(1)
+            return
+
+        try:
+            self.hal.run_command(command, self)
+        except Exception as e:
+            errorString = f"HAL error: {str(e)}"
+            print(errorString)
+            QErrorMessage.qtHandler().showMessage(errorString)
+
 class PreviewUi(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.hal: Optional[Hal] = None
+        self.halThread = HalThread()
 
         # Whether we can control the filter programmatically. Assume False until we can ask the HAL.
         filterServoControl = False
@@ -29,10 +70,10 @@ class PreviewUi(QMainWindow):
         # Get the HAL and populate the status bar.
         statusBarText: List[str] = []
         permanentStatusBarText: List[str] = [f"GUI v{VERSION}"]
-        if HAL_PATH is not None and HAL_PATH.is_socket():
-            self.hal = Hal(str(HAL_PATH))
-            # TODO: This needs to be in a thread or something -- it's hanging the UI
-            halMetadata = self.hal.run_command({
+        if self.halThread.hal is not None:
+            # We need this data to open the window, so it's okay that it's blocking.
+            # If we can't talk to the HAL, nothing else will work, so it's okay that failure here is fatal.
+            halMetadata = self.halThread.hal.run_command({
                 "command": "get_metadata",
                 "args": {}
             })
@@ -162,101 +203,76 @@ class PreviewUi(QMainWindow):
         self.setCentralWidget(mainWidget)
         self.setWindowTitle(WINDOW_TITLE)
 
+        self.halThread.started.connect(partial(self.setStartButtonsEnabled, False))
+        self.halThread.finished.connect(partial(self.setStartButtonsEnabled, True))
+
         # TODO: Loop that actually talks to the HAL -- it can probably just be a QTimer connected to `capture`
 
-    def setStartButtonsEnabled(self, enable: bool):
+    def setStartButtonsEnabled(self, running: bool):
         for button in self.startButtons:
-            button.setEnabled(enable)
+            button.setEnabled(running)
 
     @Slot(None)
     def capture(self):
-        try:
-            self.setStartButtonsEnabled(False)
+        flashes = []
+        for colorName, widget in self.durationNumbers.items():
+            duration_ms = int(widget.text())
+            if duration_ms > 0:
+                flashes.append({
+                    "led": colorName,
+                    "duration_ms": duration_ms
+                })
 
-            flashes = []
-            for colorName, widget in self.durationNumbers.items():
-                duration_ms = int(widget.text())
-                if duration_ms > 0:
-                    flashes.append({
-                        "led": colorName,
-                        "duration_ms": duration_ms
-                    })
+        if not flashes:
+            print("No flashes configured, not capturing")
+            return
 
-            if not flashes:
-                print("No flashes configured, not capturing")
-                return
-
-            if not self.hal:
-                print("Mock mode, not capturing an image")
-                print("Flashes would have contained:", flashes)
-                print("Delay to test UI")
-                time.sleep(1)
-                return
-
-            # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
-            self.hal.run_command({
-                "command": "run_image_sequence",
-                "args": {
-                    "sequence": {
-                        "label": "Preview sequence",
-                        "schema_version": 0,
-                        "images": [
-                            {
-                                "label": "Preview image",
-                                "flashes": flashes,
-                                # TODO: Retrieve the selected filter from the UI
-                                "filter": "any_filter"
-                            }
-                        ]
-                    }
+        # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
+        self.halThread.runCommand({
+            "command": "run_image_sequence",
+            "args": {
+                "sequence": {
+                    "label": "Preview sequence",
+                    "schema_version": 0,
+                    "images": [
+                        {
+                            "label": "Preview image",
+                            "flashes": flashes,
+                            # TODO: Retrieve the selected filter from the UI
+                            "filter": "any_filter"
+                        }
+                    ]
                 }
-            })
-        except Exception as e:
-            print(e)
-        finally:
-            self.setStartButtonsEnabled(True)
+            }
+        })
 
     @Slot(None)
     def cleave(self):
-        try:
-            self.setStartButtonsEnabled(False)
+        cleavingDurationMs = int(self.cleavingNumber.text())
 
-            cleavingDurationMs = int(self.cleavingNumber.text())
+        if not cleavingDurationMs:
+            print("Cleaving duration == 0, not cleaving")
+            return
 
-            if not cleavingDurationMs:
-                print("Cleaving duration == 0, not cleaving")
-                return
-
-            if not self.hal:
-                print("Mock mode, not cleaving")
-                print("Would have cleaved for:", cleavingDurationMs)
-                print("Delay to test UI")
-                time.sleep(1)
-                return
-
-            # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
-            self.hal.run_command({
-                "command": "cleave",
-                "args": {
-                    "cleave_args": {
-                        "schema_version": 0,
-                        "capture_period_ms": 0,
-                        "cleaving_duration_ms": cleavingDurationMs
-                    }
+        # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
+        self.halThread.runCommand({
+            "command": "cleave",
+            "args": {
+                "cleave_args": {
+                    "schema_version": 0,
+                    "capture_period_ms": 0,
+                    "cleaving_duration_ms": cleavingDurationMs
                 }
-            })
-        except Exception as e:
-            print(e)
-        finally:
-            self.setStartButtonsEnabled(True)
+            }
+        })
 
-    @Slot(None):
+    @Slot(None)
     def setTemperature(self):
         # TODO: There's a lot of duplicated logic in these
         # Need to start using a QThread for these anyway to avoid hanging the UI -- maybe the boilerplate can go in there somehow
         pass
 
-    @Slot(None):
+    @Slot(None)
     def disableHeater(self):
         pass
 
@@ -265,7 +281,7 @@ if __name__ == "__main__":
     ui = PreviewUi()
     ui.show()
 
-    if ui.hal is None:
+    if ui.halThread.hal is None:
         # We're in mock mode. Make it obvious.
         print(MOCK_WARNING_TEXT)
         QErrorMessage.qtHandler().showMessage(MOCK_WARNING_TEXT)

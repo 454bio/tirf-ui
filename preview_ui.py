@@ -146,9 +146,17 @@ class PreviewUi(QMainWindow):
             # TODO: Filter controls
             pass
 
+        flashButton = QPushButton("Flash")
+        flashButton.clicked.connect(partial(self.flash, False))
         captureNowButton = QPushButton("Capture")
-        captureNowButton.clicked.connect(self.capture)
+        captureNowButton.clicked.connect(partial(self.flash, True))
+        self.startButtons.append(flashButton)
         self.startButtons.append(captureNowButton)
+        ledStartButtonsLayout = QHBoxLayout()
+        ledStartButtonsLayout.addWidget(flashButton)
+        ledStartButtonsLayout.addWidget(captureNowButton)
+        ledStartButtonsWidget = QWidget()
+        ledStartButtonsWidget.setLayout(ledStartButtonsLayout)
 
         # Temperature controls.
         self.temperatureNumber = QLineEdit()
@@ -194,7 +202,7 @@ class PreviewUi(QMainWindow):
         leftLayout.addWidget(ledControlsWidget)
         if filterServoPicker:
             leftWidget.addWidget(filterServoPicker)
-        leftLayout.addWidget(captureNowButton)
+        leftLayout.addWidget(ledStartButtonsWidget)
         leftLayout.addWidget(temperatureControlsWidget)
         leftLayout.addWidget(uvCleavingControlsWidget)
         leftWidget.setLayout(leftLayout)
@@ -220,7 +228,7 @@ class PreviewUi(QMainWindow):
             button.setEnabled(running)
 
     @Slot(None)
-    def capture(self):
+    def flash(self, capture: bool):
         flashes = []
         for colorName, widget in self.durationNumbers.items():
             duration_ms = int(widget.text())
@@ -231,27 +239,35 @@ class PreviewUi(QMainWindow):
                 })
 
         if not flashes:
-            print("No flashes configured, not capturing")
+            print("No flashes configured, not flashing")
             return
 
         # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
-        self.halThread.runCommand({
-            "command": "run_image_sequence",
-            "args": {
-                "sequence": {
-                    "label": "Preview sequence",
-                    "schema_version": 0,
-                    "images": [
-                        {
-                            "label": "Preview image",
-                            "flashes": flashes,
-                            # TODO: Retrieve the selected filter from the UI
-                            "filter": "any_filter"
-                        }
-                    ]
+        if capture:
+            self.halThread.runCommand({
+                "command": "run_image_sequence",
+                "args": {
+                    "sequence": {
+                        "label": "Preview sequence",
+                        "schema_version": 0,
+                        "images": [
+                            {
+                                "label": "Preview image",
+                                "flashes": flashes,
+                                # TODO: Retrieve the selected filter from the UI
+                                "filter": "any_filter"
+                            }
+                        ]
+                    }
                 }
-            }
-        })
+            })
+        else:
+            self.halThread.runCommand({
+                "command": "flash_leds",
+                "args": {
+                    "flashes": flashes
+                }
+            })
 
     @Slot(None)
     def cleave(self):

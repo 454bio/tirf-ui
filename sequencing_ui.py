@@ -14,7 +14,7 @@ from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, Q
 
 from preview_widget import PreviewWidget
 from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, Hal
-from user_prompts import PromptApi
+from prompt_api import PromptApi
 from version import VERSION
 
 WINDOW_TITLE_BASE = "454 Sequencer"

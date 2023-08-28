@@ -47,6 +47,7 @@ class PromptApi(QObject):
         success = True
         error = None
         try:
+            # TODO: Command(s?) for local capture -- Andor Zyla camera via pylablib
             if command == "confirmation_prompt":
                 text = request["text"]
                 prompt = ConfirmationPrompt(self.parent(), text)

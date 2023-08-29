@@ -23,16 +23,17 @@ def align_ceil_32(unaligned: int):
 class PreviewThread(QThread):
     received_image = Signal(QImage, int)
 
-    def __init__(self, socket_path: Path):
+    def __init__(self, address: str, port: int):
         super().__init__()
-        self.socket_path = socket_path
+        self.address = address
+        self.port = port
 
     @Slot(None)
     def run(self):
         while True:
             try:
-                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-                    s.connect(str(self.socket_path))
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((self.address, self.port))
                     frame = 0
                     while True:
                         image = self.read_preview_image(s)
@@ -60,7 +61,7 @@ class PreviewThread(QThread):
         return QImage(image_bytes, width, height, align_ceil_32(width*3), QImage.Format(imageFormat))
 
 class PreviewWidget(QWidget):
-    def __init__(self, previewPath: Path, rows: int = PREVIEW_ROWS, cols: int = PREVIEW_COLS):
+    def __init__(self, previewAddress: str, previewPort: int, rows: int = PREVIEW_ROWS, cols: int = PREVIEW_COLS):
         super().__init__()
 
         self.rows = rows
@@ -77,7 +78,7 @@ class PreviewWidget(QWidget):
 
         self.setLayout(layout)
 
-        self.socketThread = PreviewThread(previewPath)
+        self.socketThread = PreviewThread(previewAddress, previewPort)
         self.socketThread.received_image.connect(self.showImage)
         self.socketThread.start()
 

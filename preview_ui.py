@@ -1,22 +1,22 @@
 import sys
 import time
 from functools import partial
-from pathlib import Path
 from typing import Dict, List, Optional
 
 from PySide2.QtCore import Slot, QThread, Qt
 from PySide2.QtGui import QDoubleValidator, QIntValidator
 from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPushButton, QSlider, QVBoxLayout, QWidget
 
+import ip_utils
 from hal import boost_bool, Hal
 from preview_widget import PreviewWidget
 from sequencing_protocol import MAX_TEMPERATURE_HOLD_S, MAX_TEMPERATURE_WAIT_S
 from version import VERSION
 
 WINDOW_TITLE = "454 Image Preview"
-HAL_PATH: Optional[Path] = Path("/454/api")
-PREVIEW_PATH: Optional[Path] = Path("/454/preview")
-MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
+HAL_PORT: Optional[int] = 45400
+PREVIEW_PORT: Optional[int] = 45401
+MOCK_WARNING_TEXT = f"No HAL on port {HAL_PORT}, running in mock mode"
 
 class HalThread(QThread):
     def __init__(self):
@@ -26,8 +26,8 @@ class HalThread(QThread):
 
         # Create the HAL iff there's a socket we can connect to.
         # Otherwise, run in mock mode.
-        if HAL_PATH is not None and HAL_PATH.is_socket():
-            self.hal = Hal(str(HAL_PATH))
+        if HAL_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, HAL_PORT):
+            self.hal = Hal(ip_utils.CONNECT_ADDRESS, HAL_PORT)
 
     def runCommand(self, command: Dict):
         self.command = command
@@ -94,8 +94,8 @@ class PreviewUi(QMainWindow):
             statusBar.addWidget(QLabel(text))
 
         previewWidget: Optional[PreviewWidget] = None
-        if PREVIEW_PATH is not None and PREVIEW_PATH.is_socket():
-            previewWidget = PreviewWidget(PREVIEW_PATH)
+        if PREVIEW_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, PREVIEW_PORT):
+            previewWidget = PreviewWidget(ip_utils.CONNECT_ADDRESS, PREVIEW_PORT)
 
         self.startButtons: List[QPushButton] = []
         self.stopButton = QPushButton("Cancel")

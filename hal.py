@@ -21,11 +21,12 @@ class HalError(Exception):
 @dataclass
 class Hal:
     """Simple wrapper to send commands to the HAL."""
-    socket_path: str
+    address: str
+    port: int
 
     def run_command(self, command: Dict, thread=None, tries=float("inf")) -> Dict:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-            s.connect(self.socket_path)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
 
             request_raw = json.dumps(command).encode(ENCODING)
             s.sendall(request_raw)

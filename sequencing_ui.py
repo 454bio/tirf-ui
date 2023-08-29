@@ -9,9 +9,10 @@ from typing import Dict, List, Optional, Tuple
 
 from PySide2.QtCore import Signal, Slot, QThread, QTimer
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
-from PySide2.QtNetwork import QLocalServer
+from PySide2.QtNetwork import QHostAddress, QTcpServer
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel
 
+import ip_utils
 from preview_widget import PreviewWidget
 from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, Hal
 from prompt_api import PromptApi
@@ -21,16 +22,16 @@ WINDOW_TITLE_BASE = "454 Sequencer"
 PROTOCOLS_DIR = "protocols"
 MARGIN_BETWEEN_EVENTS = 12
 
-HAL_PATH: Optional[Path] = Path("/454/api")
-PREVIEW_PATH: Optional[Path] = Path("/454/preview")
-STATUS_PATH: Optional[Path] = Path("/454/hal-status")
+HAL_PORT: Optional[int] = 45400
+PREVIEW_PORT: Optional[int] = 45401
+STATUS_PORT: Optional[int] = 45403
 OUTPUT_DIR_ROOT = Path.home() / "454" / "output"
 
 MAX_STATUS_WAIT_MS = 100
 MAX_STATUS_MESSAGE_SIZE = 1 << 10
 ENCODING = "utf-8"
 
-MOCK_WARNING_TEXT = f"No HAL at {HAL_PATH}, running in mock mode"
+MOCK_WARNING_TEXT = f"No HAL on port {HAL_PORT}, running in mock mode"
 
 class SequencingProtocolStatus(enum.Enum):
     NEED_PROTOCOL = "Open a protocol to begin"
@@ -52,8 +53,8 @@ class ProtocolThread(QThread):
 
         # Create the HAL iff there's a socket we can connect to.
         # Otherwise, run in mock mode.
-        if HAL_PATH is not None and HAL_PATH.is_socket():
-            self.hal = Hal(str(HAL_PATH))
+        if HAL_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, HAL_PORT):
+            self.hal = Hal(ip_utils.CONNECT_ADDRESS, HAL_PORT)
 
     @Slot(None)
     def run(self):
@@ -178,8 +179,8 @@ class SequencingUi(QMainWindow):
         super().__init__()
 
         previewWidget: Optional[PreviewWidget] = None
-        if PREVIEW_PATH is not None and PREVIEW_PATH.is_socket():
-            previewWidget = PreviewWidget(PREVIEW_PATH)
+        if PREVIEW_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, PREVIEW_PORT):
+            previewWidget = PreviewWidget(ip_utils.CONNECT_ADDRESS, PREVIEW_PORT)
 
         # Create the main elements...
         self.protocolThread = ProtocolThread()
@@ -237,13 +238,11 @@ class SequencingUi(QMainWindow):
         self.updateStatusWidget("status", SequencingProtocolStatus.NEED_PROTOCOL.value)
 
         # Server for dynamic status bar widgets
-        self.statusServer = QLocalServer(self)
-        if STATUS_PATH is not None and self.protocolThread.hal is not None:
+        self.statusServer = QTcpServer(self)
+        if STATUS_PORT is not None and self.protocolThread.hal is not None:
             self.statusServer.newConnection.connect(self.handleStatusConnection)
-            STATUS_PATH.unlink(missing_ok=True)
-            if not self.statusServer.listen(str(STATUS_PATH)):
+            if not self.statusServer.listen(QHostAddress(ip_utils.LISTEN_ADDRESS), STATUS_PORT):
                 raise Exception("Could not start status server")
-            STATUS_PATH.chmod(777)
 
         # Holder for static status bar widgets (placed on the right)
         statusBarText = [f"GUI v{VERSION}"]
@@ -358,7 +357,7 @@ if __name__ == "__main__":
     ui = SequencingUi()
     ui.show()
 
-    if HAL_PATH is not None and HAL_PATH.is_socket():
+    if HAL_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, HAL_PORT):
         # Only need the prompt API if we're connecting to a HAL.
         promptApi = PromptApi(ui)
     else:

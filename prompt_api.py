@@ -1,14 +1,15 @@
 import json
-from pathlib import Path
 
 from PySide2.QtCore import Slot, QObject
-from PySide2.QtNetwork import QLocalServer
+from PySide2.QtNetwork import QHostAddress, QTcpServer
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
+
+import ip_utils
 
 ENCODING = "utf-8"
 MAX_REQUEST_SIZE = 1 << 10
 MAX_READ_WAIT_MS = 100
-PROMPT_PATH = Path("/454/hal-message")
+PROMPT_PORT = 45402
 
 class ConfirmationPrompt(QDialog):
     def __init__(self, parent: QWidget, text: str):
@@ -24,15 +25,13 @@ class ConfirmationPrompt(QDialog):
         self.setLayout(layout)
 
 class PromptApi(QObject):
-    def __init__(self, parent, socketPath=PROMPT_PATH):
+    def __init__(self, parent, port=PROMPT_PORT):
         super().__init__(parent)
 
-        self.server = QLocalServer(self)
+        self.server = QTcpServer(self)
         self.server.newConnection.connect(self.handleConnection)
-        socketPath.unlink(missing_ok=True)
-        if not self.server.listen(str(socketPath)):
+        if not self.server.listen(QHostAddress(ip_utils.LISTEN_ADDRESS), port):
             raise Exception("Could not start prompt API server")
-        socketPath.chmod(777)
 
     @Slot(None)
     def handleConnection(self):

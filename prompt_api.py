@@ -1,14 +1,13 @@
 import json
+from functools import partial
 
 from PySide2.QtCore import Slot, QObject
-from PySide2.QtNetwork import QHostAddress, QTcpServer
+from PySide2.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
 
 import ip_utils
 
 ENCODING = "utf-8"
-MAX_REQUEST_SIZE = 1 << 10
-MAX_READ_WAIT_MS = 100
 PROMPT_PORT = 45402
 
 class ConfirmationPrompt(QDialog):
@@ -36,10 +35,11 @@ class PromptApi(QObject):
     @Slot(None)
     def handleConnection(self):
         s = self.server.nextPendingConnection()
-        if not s.waitForReadyRead(MAX_READ_WAIT_MS):
-            raise TimeoutError
+        s.readyRead.connect(partial(self.handleMessage, s))
 
-        request_str = s.readData(MAX_REQUEST_SIZE)
+    @Slot(QTcpSocket)
+    def handleMessage(self, s: QTcpSocket):
+        request_str = bytes(s.readAll()).decode(ENCODING)
         request = json.loads(request_str)
         command = request.get("command")
 

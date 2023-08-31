@@ -4,12 +4,13 @@ import sys
 import time
 import traceback
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from PySide2.QtCore import Signal, Slot, QThread, QTimer
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
-from PySide2.QtNetwork import QHostAddress, QTcpServer
+from PySide2.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel
 
 import ip_utils
@@ -27,8 +28,6 @@ PREVIEW_PORT: Optional[int] = 45401
 STATUS_PORT: Optional[int] = 45403
 OUTPUT_DIR_ROOT = Path.home() / "454" / "output"
 
-MAX_STATUS_WAIT_MS = 100
-MAX_STATUS_MESSAGE_SIZE = 1 << 10
 ENCODING = "utf-8"
 
 MOCK_WARNING_TEXT = f"No HAL on port {HAL_PORT}, running in mock mode"
@@ -264,10 +263,11 @@ class SequencingUi(QMainWindow):
     @Slot(None)
     def handleStatusConnection(self):
         s = self.statusServer.nextPendingConnection()
-        if not s.waitForReadyRead(MAX_STATUS_WAIT_MS):
-            raise TimeoutError
-        
-        status_message_str = s.readData(MAX_STATUS_MESSAGE_SIZE)
+        s.readyRead.connect(partial(self.handleStatusMessage, s))
+
+    @Slot(QTcpSocket)
+    def handleStatusMessage(self, s: QTcpSocket):
+        status_message_str = bytes(s.readAll()).decode(ENCODING)
         status = json.loads(status_message_str)
 
         success = True

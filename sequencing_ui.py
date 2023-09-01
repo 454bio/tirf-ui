@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 
 from PySide2.QtCore import Signal, Slot, QThread, QTimer
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
-from PySide2.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
+from PySide2.QtNetwork import QTcpSocket
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel
 
 import ip_utils
@@ -23,9 +23,9 @@ WINDOW_TITLE_BASE = "454 Sequencer"
 PROTOCOLS_DIR = "protocols"
 MARGIN_BETWEEN_EVENTS = 12
 
-HAL_PORT: Optional[int] = 45400
-PREVIEW_PORT: Optional[int] = 45401
-STATUS_PORT: Optional[int] = 45403
+HAL_PORT = 45400
+PREVIEW_PORT = 45401
+STATUS_PORT = 45403
 OUTPUT_DIR_ROOT = Path.home() / "454" / "output"
 
 ENCODING = "utf-8"
@@ -52,7 +52,7 @@ class ProtocolThread(QThread):
 
         # Create the HAL iff there's a socket we can connect to.
         # Otherwise, run in mock mode.
-        if HAL_PORT is not None and ip_utils.exists(halAddress, HAL_PORT):
+        if ip_utils.exists(halAddress, HAL_PORT):
             self.hal = Hal(halAddress, HAL_PORT)
 
     @Slot(None)
@@ -178,7 +178,7 @@ class SequencingUi(QMainWindow):
         super().__init__()
 
         previewWidget: Optional[PreviewWidget] = None
-        if PREVIEW_PORT is not None and ip_utils.exists(halAddress, PREVIEW_PORT):
+        if ip_utils.exists(halAddress, PREVIEW_PORT):
             previewWidget = PreviewWidget(halAddress, PREVIEW_PORT)
 
         # Create the main elements...
@@ -236,12 +236,9 @@ class SequencingUi(QMainWindow):
         self.statusWidgets: Dict[str, QLabel] = {}
         self.updateStatusWidget("status", SequencingProtocolStatus.NEED_PROTOCOL.value)
 
-        # Server for dynamic status bar widgets
-        self.statusServer = QTcpServer(self)
-        if STATUS_PORT is not None and self.protocolThread.hal is not None:
-            self.statusServer.newConnection.connect(self.handleStatusConnection)
-            if not self.statusServer.listen(QHostAddress(ip_utils.LISTEN_ADDRESS), STATUS_PORT):
-                raise Exception("Could not start status server")
+        # Continuous connection to HAL for dynamic status bar widgets
+        if self.protocolThread.hal is not None:
+            self.connectToStatusServer(halAddress)
 
         # Holder for static status bar widgets (placed on the right)
         statusBarText = [f"GUI v{VERSION}"]
@@ -261,32 +258,18 @@ class SequencingUi(QMainWindow):
         self.startButton.setEnabled(False)
 
     @Slot(None)
-    def handleStatusConnection(self):
-        s = self.statusServer.nextPendingConnection()
-        s.readyRead.connect(partial(self.handleStatusMessage, s))
+    def connectToStatusServer(self, halAddress):
+        statusSocket = QTcpSocket()
+        statusSocket.readyRead.connect(partial(self.handleStatusMessage, statusSocket))
+        statusSocket.disconnected.connect(partial(self.connectToStatusServer, halAddress))
+        statusSocket.connectToHost(halAddress, STATUS_PORT)
 
     @Slot(QTcpSocket)
     def handleStatusMessage(self, s: QTcpSocket):
         status_message_str = bytes(s.readAll()).decode(ENCODING)
         status = json.loads(status_message_str)
 
-        success = True
-        error = None
-        try:
-            self.updateStatusWidget(**status)
-        except Exception as e:
-            success = False
-            error = str(e)
-
-        response = {
-            "success": success,
-            "error": error
-        }
-        try:
-            s.write(json.dumps(response).encode(ENCODING))
-        except Exception as e:
-            print(f"Unable to write status response")
-            print(e)
+        self.updateStatusWidget(**status)
 
     def updateStatusWidget(self, name: str, text: str):
         widget = self.statusWidgets.get(name)
@@ -358,7 +341,7 @@ if __name__ == "__main__":
     ui = SequencingUi(halAddress)
     ui.show()
 
-    if HAL_PORT is not None and ip_utils.exists(halAddress, HAL_PORT):
+    if ip_utils.exists(halAddress, HAL_PORT):
         # Only need the prompt API if we're connecting to a HAL.
         promptApi = PromptApi(ui)
     else:

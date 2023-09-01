@@ -45,15 +45,15 @@ class ProtocolThread(QThread):
     error = Signal(tuple)
     progress = Signal(RunContext)
 
-    def __init__(self):
+    def __init__(self, halAddress):
         super().__init__()
         self.protocol: Optional[Event] = None
         self.hal: Optional[Hal] = None
 
         # Create the HAL iff there's a socket we can connect to.
         # Otherwise, run in mock mode.
-        if HAL_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, HAL_PORT):
-            self.hal = Hal(ip_utils.CONNECT_ADDRESS, HAL_PORT)
+        if HAL_PORT is not None and ip_utils.exists(halAddress, HAL_PORT):
+            self.hal = Hal(halAddress, HAL_PORT)
 
     @Slot(None)
     def run(self):
@@ -174,15 +174,15 @@ class ProtocolViewer(QTextEdit):
         self.lastContext = context
 
 class SequencingUi(QMainWindow):
-    def __init__(self):
+    def __init__(self, halAddress):
         super().__init__()
 
         previewWidget: Optional[PreviewWidget] = None
-        if PREVIEW_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, PREVIEW_PORT):
-            previewWidget = PreviewWidget(ip_utils.CONNECT_ADDRESS, PREVIEW_PORT)
+        if PREVIEW_PORT is not None and ip_utils.exists(halAddress, PREVIEW_PORT):
+            previewWidget = PreviewWidget(halAddress, PREVIEW_PORT)
 
         # Create the main elements...
-        self.protocolThread = ProtocolThread()
+        self.protocolThread = ProtocolThread(halAddress)
         self.protocolViewer = ProtocolViewer()
         self.startButton = QPushButton()
         self.stopButton = QPushButton()
@@ -354,10 +354,11 @@ class SequencingUi(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    ui = SequencingUi()
+    halAddress = ip_utils.CONNECT_ADDRESS if len(sys.argv) == 1 else sys.argv[1]
+    ui = SequencingUi(halAddress)
     ui.show()
 
-    if HAL_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, HAL_PORT):
+    if HAL_PORT is not None and ip_utils.exists(halAddress, HAL_PORT):
         # Only need the prompt API if we're connecting to a HAL.
         promptApi = PromptApi(ui)
     else:

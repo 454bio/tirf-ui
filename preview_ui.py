@@ -19,15 +19,15 @@ PREVIEW_PORT: Optional[int] = 45401
 MOCK_WARNING_TEXT = f"No HAL on port {HAL_PORT}, running in mock mode"
 
 class HalThread(QThread):
-    def __init__(self):
+    def __init__(self, halAddress):
         super().__init__()
         self.command: Optional[Dict] = None
         self.hal: Optional[Hal] = None
 
         # Create the HAL iff there's a socket we can connect to.
         # Otherwise, run in mock mode.
-        if HAL_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, HAL_PORT):
-            self.hal = Hal(ip_utils.CONNECT_ADDRESS, HAL_PORT)
+        if HAL_PORT is not None and ip_utils.exists(halAddress, HAL_PORT):
+            self.hal = Hal(halAddress, HAL_PORT)
 
     def runCommand(self, command: Dict):
         self.command = command
@@ -59,10 +59,10 @@ class HalThread(QThread):
             QErrorMessage.qtHandler().showMessage(errorString)
 
 class PreviewUi(QMainWindow):
-    def __init__(self):
+    def __init__(self, halAddress):
         super().__init__()
 
-        self.halThread = HalThread()
+        self.halThread = HalThread(halAddress)
 
         # Whether we can control the filter programmatically. Assume False until we can ask the HAL.
         filterServoControl = False
@@ -94,8 +94,8 @@ class PreviewUi(QMainWindow):
             statusBar.addWidget(QLabel(text))
 
         previewWidget: Optional[PreviewWidget] = None
-        if PREVIEW_PORT is not None and ip_utils.exists(ip_utils.CONNECT_ADDRESS, PREVIEW_PORT):
-            previewWidget = PreviewWidget(ip_utils.CONNECT_ADDRESS, PREVIEW_PORT)
+        if PREVIEW_PORT is not None and ip_utils.exists(halAddress, PREVIEW_PORT):
+            previewWidget = PreviewWidget(halAddress, PREVIEW_PORT)
 
         self.startButtons: List[QPushButton] = []
         self.stopButton = QPushButton("Cancel")
@@ -318,7 +318,8 @@ class PreviewUi(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    ui = PreviewUi()
+    halAddress = ip_utils.CONNECT_ADDRESS if len(sys.argv) == 1 else sys.argv[1]
+    ui = PreviewUi(halAddress)
     ui.show()
 
     if ui.halThread.hal is None:

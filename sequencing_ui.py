@@ -14,9 +14,10 @@ from PySide2.QtNetwork import QTcpSocket
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel
 
 import ip_utils
+from manual_controls_widget import ManualControlsWidget
 from preview_widget import PreviewWidget
-from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, Hal
 from prompt_api import PromptApi
+from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, Hal
 from version import VERSION
 
 WINDOW_TITLE_BASE = "454 Sequencer"
@@ -177,59 +178,13 @@ class SequencingUi(QMainWindow):
     def __init__(self, halAddress):
         super().__init__()
 
-        previewWidget: Optional[PreviewWidget] = None
-        if ip_utils.exists(halAddress, PREVIEW_PORT):
-            previewWidget = PreviewWidget(halAddress, PREVIEW_PORT)
+        self.populateWidgets(halAddress)
 
-        # Create the main elements...
         self.protocolThread = ProtocolThread(halAddress)
-        self.protocolViewer = ProtocolViewer()
-        self.startButton = QPushButton()
-        self.stopButton = QPushButton()
-        self.openAction = QAction("&Open")
-        # self.settingsAction = QAction("S&ettings")
-
-        # TODO: Estimated total time and estimated time remaining -- status bar
-
-        # ...populate them ...
-        self.startButton.setText("Start")
-        self.stopButton.setText("Stop")
-
-        # ... make them do stuff...
         self.protocolThread.progress.connect(self.protocolViewer.progress)
         self.protocolThread.finished.connect(self.finished)
         self.protocolThread.error.connect(self.error)
-        self.openAction.triggered.connect(self.open)
-        # self.settingsAction.triggered.connect()
-        self.startButton.clicked.connect(self.start)
-        self.stopButton.clicked.connect(self.stop)
-
-        # ... and lay them out.
-        # TODO: mainLayout that holds leftLayout and rightLayout
-        mainWidget = QWidget()
-        mainLayout = QHBoxLayout()
-        mainWidget.setLayout(mainLayout)
-
-        leftWidget = QWidget()
-        leftLayout = QVBoxLayout()
-        leftWidget.setLayout(leftLayout)
-        leftLayout.addWidget(self.protocolViewer)
-        startStopWidget = QWidget()
-        startStopLayout = QHBoxLayout()
-        startStopWidget.setLayout(startStopLayout)
-        startStopLayout.addWidget(self.startButton)
-        startStopLayout.addWidget(self.stopButton)
-        leftLayout.addWidget(startStopWidget)
-        mainLayout.addWidget(leftWidget)
-
-        if previewWidget is not None:
-            mainLayout.addWidget(previewWidget)
-
-        fileMenu = self.menuBar().addMenu("&File")
-        fileMenu.addAction(self.openAction)
-        # fileMenu.addAction(self.settingsAction)
-
-        self.setCentralWidget(mainWidget)
+        
         self.setWindowTitle(WINDOW_TITLE_BASE)
 
         # Holder for dynamic status bar widgets (placed on the left)
@@ -256,6 +211,68 @@ class SequencingUi(QMainWindow):
 
         self.stop()
         self.startButton.setEnabled(False)
+    
+    def populateWidgets(self, halAddress):
+        previewWidget: Optional[PreviewWidget] = None
+        if ip_utils.exists(halAddress, PREVIEW_PORT):
+            previewWidget = PreviewWidget(halAddress, PREVIEW_PORT)
+
+        # Create the main elements...
+        self.protocolViewer = ProtocolViewer()
+        self.startButton = QPushButton("Start protocol")
+        self.stopButton = QPushButton("Stop protocol")
+        toggleManualButton = QPushButton("Manual controls")
+        # TODO: Make this hook into the the ProtocolThread's HAL instead (or vice versa)
+        # TODO: This avoids unnecessary threads and allows a protocol event to disable the manual buttons
+        self.manualControls = ManualControlsWidget(halAddress)
+        self.openAction = QAction("&Open")
+        # self.settingsAction = QAction("S&ettings")
+
+        self.manualControlsVisible = True
+        self.toggleManualControls()
+
+        # TODO: Estimated total time and estimated time remaining -- status bar
+
+        # ... make them do stuff...
+        self.openAction.triggered.connect(self.open)
+        # self.settingsAction.triggered.connect()
+        self.startButton.clicked.connect(self.start)
+        self.stopButton.clicked.connect(self.stop)
+        toggleManualButton.clicked.connect(self.toggleManualControls)
+
+        # ... and lay them out.
+        # TODO: mainLayout that holds leftLayout and rightLayout
+        mainWidget = QWidget()
+        mainLayout = QHBoxLayout()
+        mainWidget.setLayout(mainLayout)
+
+        leftWidget = QWidget()
+        leftLayout = QVBoxLayout()
+        leftWidget.setLayout(leftLayout)
+        leftLayout.addWidget(self.protocolViewer)
+        startStopWidget = QWidget()
+        startStopLayout = QHBoxLayout()
+        startStopWidget.setLayout(startStopLayout)
+        startStopLayout.addWidget(self.startButton)
+        startStopLayout.addWidget(self.stopButton)
+        startStopLayout.addWidget(toggleManualButton)
+        leftLayout.addWidget(startStopWidget)
+        leftLayout.addWidget(self.manualControls)
+        mainLayout.addWidget(leftWidget)
+
+        if previewWidget is not None:
+            mainLayout.addWidget(previewWidget)
+
+        fileMenu = self.menuBar().addMenu("&File")
+        fileMenu.addAction(self.openAction)
+        # fileMenu.addAction(self.settingsAction)
+
+        self.setCentralWidget(mainWidget)
+
+    @Slot(None)
+    def toggleManualControls(self):
+        self.manualControlsVisible = not self.manualControlsVisible
+        self.manualControls.setVisible(self.manualControlsVisible)
 
     @Slot(None)
     def connectToStatusServer(self, halAddress):

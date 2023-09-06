@@ -5,17 +5,15 @@ from typing import Dict, List, Optional
 
 from PySide2.QtCore import Slot, QThread, Qt
 from PySide2.QtGui import QDoubleValidator, QIntValidator
-from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPushButton, QSlider, QVBoxLayout, QWidget
+from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QVBoxLayout, QWidget
 
 import ip_utils
 from hal import boost_bool, Hal
-from preview_widget import PreviewWidget
 from sequencing_protocol import MAX_TEMPERATURE_HOLD_S, MAX_TEMPERATURE_WAIT_S
 from version import VERSION
 
 WINDOW_TITLE = "454 Image Preview"
-HAL_PORT: Optional[int] = 45400
-PREVIEW_PORT: Optional[int] = 45401
+HAL_PORT = 45400
 MOCK_WARNING_TEXT = f"No HAL on port {HAL_PORT}, running in mock mode"
 
 class HalThread(QThread):
@@ -58,7 +56,7 @@ class HalThread(QThread):
             print(errorString)
             QErrorMessage.qtHandler().showMessage(errorString)
 
-class PreviewUi(QMainWindow):
+class ManualControlsWidget(QWidget):
     def __init__(self, halAddress):
         super().__init__()
 
@@ -87,20 +85,10 @@ class PreviewUi(QMainWindow):
                 statusBarText.append(f"Shutter time {maxLedFlashMs} ms")
         else:
             permanentStatusBarText.append("Mock mode (no HAL)")
-        statusBar = self.statusBar()
-        for text in permanentStatusBarText:
-            statusBar.addPermanentWidget(QLabel(text))
-        for text in statusBarText:
-            statusBar.addWidget(QLabel(text))
-
-        previewWidget: Optional[PreviewWidget] = None
-        if PREVIEW_PORT is not None and ip_utils.exists(halAddress, PREVIEW_PORT):
-            previewWidget = PreviewWidget(halAddress, PREVIEW_PORT)
 
         self.startButtons: List[QPushButton] = []
-        self.stopButton = QPushButton("Cancel")
+        self.stopButton = QPushButton("Cancel manual operation")
         self.stopButton.clicked.connect(self.halThread.requestInterruption)
-        statusBar.addWidget(self.stopButton)
 
         # Generate the controls for each LED.
         # This cannot be rolled into the `for` loop below because Python's late-binding will result in the connections being crossed.
@@ -194,26 +182,16 @@ class PreviewUi(QMainWindow):
         uvCleavingControlsWidget.setLayout(uvCleavingControlsLayout)
 
         # Lay them out.
-        mainWidget = QWidget()
-        mainLayout = QHBoxLayout()
-
-        leftWidget = QWidget()
-        leftLayout = QVBoxLayout()
-        leftLayout.addWidget(ledControlsWidget)
+        mainLayout = QVBoxLayout()
+        mainLayout.addWidget(ledControlsWidget)
         if filterServoPicker:
-            leftWidget.addWidget(filterServoPicker)
-        leftLayout.addWidget(ledStartButtonsWidget)
-        leftLayout.addWidget(temperatureControlsWidget)
-        leftLayout.addWidget(uvCleavingControlsWidget)
-        leftWidget.setLayout(leftLayout)
-        mainLayout.addWidget(leftWidget)
+            mainLayout.addWidget(filterServoPicker)
+        mainLayout.addWidget(ledStartButtonsWidget)
+        mainLayout.addWidget(temperatureControlsWidget)
+        mainLayout.addWidget(uvCleavingControlsWidget)
+        mainLayout.addWidget(self.stopButton)
 
-        if previewWidget is not None:
-            mainLayout.addWidget(previewWidget)
-
-        mainWidget.setLayout(mainLayout)
-        self.setCentralWidget(mainWidget)
-        self.setWindowTitle(WINDOW_TITLE)
+        self.setLayout(mainLayout)
 
         self.halThread.started.connect(partial(self.setStartButtonsEnabled, False))
         self.halThread.finished.connect(partial(self.setStartButtonsEnabled, True))
@@ -319,7 +297,7 @@ class PreviewUi(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     halAddress = ip_utils.CONNECT_ADDRESS if len(sys.argv) == 1 else sys.argv[1]
-    ui = PreviewUi(halAddress)
+    ui = ManualControlsWidget(halAddress)
     ui.show()
 
     if ui.halThread.hal is None:

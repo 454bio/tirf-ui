@@ -21,7 +21,7 @@ def align_ceil_32(unaligned: int):
     return math.ceil(unaligned / 32) * 32
 
 class PreviewThread(QThread):
-    received_image = Signal(QImage, int)
+    received_image = Signal(QImage)
 
     def __init__(self, address: str, port: int):
         super().__init__()
@@ -34,11 +34,9 @@ class PreviewThread(QThread):
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.connect((self.address, self.port))
-                    frame = 0
                     while True:
                         image = self.read_preview_image(s)
-                        self.received_image.emit(image, frame)
-                        frame += 1
+                        self.received_image.emit(image)
 
             except InterruptedError:
                 break
@@ -61,28 +59,32 @@ class PreviewThread(QThread):
         return QImage(image_bytes, width, height, align_ceil_32(width*3), QImage.Format(imageFormat))
 
 class PreviewWidget(QWidget):
-    def __init__(self, previewAddress: str, previewPort: int, rows: int = PREVIEW_ROWS, cols: int = PREVIEW_COLS):
+    def __init__(self, rows: int = PREVIEW_ROWS, cols: int = PREVIEW_COLS):
         super().__init__()
 
         self.rows = rows
         self.cols = cols
+        self.frame = 0
 
         # Set up UI...
         layout = QGridLayout()
         self.labels: List[QLabel] = []
         for i in range(self.rows * self.cols):
             label = QLabel()
+            # TODO: Size?
             label.setMinimumSize(253, 190)
             self.labels.append(label)
             layout.addWidget(label, i // self.rows, i % self.cols)
 
         self.setLayout(layout)
 
+    def connectToHal(self, previewAddress: str, previewPort: int):
         self.socketThread = PreviewThread(previewAddress, previewPort)
         self.socketThread.received_image.connect(self.showImage)
         self.socketThread.start()
 
-    @Slot(QImage, int)
-    def showImage(self, image: QImage, frame: int):
-        label = self.labels[frame % (self.rows * self.cols)]
+    @Slot(QImage)
+    def showImage(self, image: QImage):
+        label = self.labels[self.frame % (self.rows * self.cols)]
         label.setPixmap(QPixmap.fromImage(image))
+        self.frame += 1

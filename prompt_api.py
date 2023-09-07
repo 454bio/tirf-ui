@@ -3,10 +3,18 @@ import json
 import time
 from functools import partial
 
-from PIL import Image
-from PySide2.QtCore import Slot, QObject
+from PySide2.QtCore import Signal, Slot, QObject
+from PySide2.QtGui import QImage
 from PySide2.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
+
+# Gaslight PIL into thinking that PySide2 is PySide6.
+# PySide6 is not available on Raspbian Bullseye, but the API is close enough that this works.
+from PySide2 import QtCore, QtGui
+import sys
+sys.modules["PySide6.QtCore"] = QtCore
+sys.modules["PySide6.QtGui"] = QtGui
+from PIL import Image, ImageQt
 
 import ip_utils
 
@@ -27,6 +35,8 @@ class ConfirmationPrompt(QDialog):
         self.setLayout(layout)
 
 class PromptApi(QObject):
+    received_image = Signal(QImage)
+
     def __init__(self, parent, port=PROMPT_PORT):
         super().__init__(parent)
 
@@ -106,7 +116,7 @@ class PromptApi(QObject):
                 image = Image.fromarray(self.camera.read_oldest_image())
                 if path:
                     image.save(path)
-                # TODO: Preview the image -- maybe use PIL's native ImageQt support 
+                self.received_image.emit(ImageQt.ImageQt(image.resize((512, 512), Image.Resampling.NEAREST)))
             elif command == "camera_stop_and_save":
                 # Stop the local camera, saving any remaining images.
                 # If configured, this is typically called at the end of an image sequence.
@@ -121,7 +131,7 @@ class PromptApi(QObject):
                     image = Image.fromarray(image_arr)
                     if path:
                         image.save(f"{path}-{image_index}.tif")
-                    # TODO: Preview the image -- maybe use PIL's native ImageQt support
+                    self.received_image.emit(ImageQt.ImageQt(image.resize((512, 512), Image.Resampling.NEAREST)))
                 self.camera.stop_acquisition()
             else:
                 raise ValueError(f"Unknown command {command}")

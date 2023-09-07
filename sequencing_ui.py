@@ -185,7 +185,7 @@ class SequencingUi(QMainWindow):
         self.protocolThread.progress.connect(self.protocolViewer.progress)
         self.protocolThread.finished.connect(self.finished)
         self.protocolThread.error.connect(self.error)
-        
+
         self.setWindowTitle(WINDOW_TITLE_BASE)
 
         # Holder for dynamic status bar widgets (placed on the left)
@@ -214,10 +214,9 @@ class SequencingUi(QMainWindow):
         self.startButton.setEnabled(False)
     
     def populateWidgets(self, halAddress):
-        previewWidget: Optional[PreviewWidget] = None
+        self.previewWidget = PreviewWidget()
         if ip_utils.exists(halAddress, PREVIEW_PORT):
-            previewWidget = PreviewWidget(halAddress, PREVIEW_PORT)
-        # TODO: Preview for local cameras. Can enable/disable this using HAL metadata.
+            self.previewWidget.connectToHal(halAddress, PREVIEW_PORT)
 
         # Create the main elements...
         self.protocolViewer = ProtocolViewer()
@@ -261,9 +260,7 @@ class SequencingUi(QMainWindow):
         leftLayout.addWidget(startStopWidget)
         leftLayout.addWidget(self.manualControls)
         mainLayout.addWidget(leftWidget)
-
-        if previewWidget is not None:
-            mainLayout.addWidget(previewWidget)
+        mainLayout.addWidget(self.previewWidget)
 
         fileMenu = self.menuBar().addMenu("&File")
         fileMenu.addAction(self.openAction)
@@ -364,6 +361,7 @@ if __name__ == "__main__":
     if ip_utils.exists(halAddress, HAL_PORT):
         # Only need the prompt API if we're connecting to a HAL.
         promptApi = PromptApi(ui)
+        promptApi.received_image.connect(ui.previewWidget.showImage)
     else:
         # Otherwise, we're in mock mode. Make it obvious.
         print(MOCK_WARNING_TEXT)

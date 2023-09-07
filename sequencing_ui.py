@@ -59,7 +59,8 @@ class ProtocolThread(QThread):
     @Slot(None)
     def run(self):
         protocol = self.protocol
-        output_dir = OUTPUT_DIR_ROOT / datetime.now().isoformat()
+        # Windows doesn't support colons in filenames
+        output_dir = OUTPUT_DIR_ROOT / datetime.now().isoformat().replace(":", ";")
         result = SequencingProtocolStatus.COMPLETED
         if protocol is not None:
             try:
@@ -216,6 +217,7 @@ class SequencingUi(QMainWindow):
         previewWidget: Optional[PreviewWidget] = None
         if ip_utils.exists(halAddress, PREVIEW_PORT):
             previewWidget = PreviewWidget(halAddress, PREVIEW_PORT)
+        # TODO: Preview for local cameras. Can enable/disable this using HAL metadata.
 
         # Create the main elements...
         self.protocolViewer = ProtocolViewer()
@@ -283,6 +285,7 @@ class SequencingUi(QMainWindow):
 
     @Slot(QTcpSocket)
     def handleStatusMessage(self, s: QTcpSocket):
+        # TODO: Something in this chain is leaking 24K every time this is called
         status_message_str = bytes(s.readAll()).decode(ENCODING)
         status = json.loads(status_message_str)
 
@@ -290,7 +293,7 @@ class SequencingUi(QMainWindow):
 
     def updateStatusWidget(self, name: str, text: str):
         widget = self.statusWidgets.get(name)
-        if widget:
+        if widget is not None:
             widget.setText(text)
         else:
             widget = QLabel(text)

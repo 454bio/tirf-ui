@@ -1,7 +1,9 @@
 import atexit
 import json
+import time
 from functools import partial
 
+from PIL import Image
 from PySide2.QtCore import Slot, QObject
 from PySide2.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
@@ -33,6 +35,9 @@ class PromptApi(QObject):
         if not self.server.listen(QHostAddress(ip_utils.LISTEN_ADDRESS), port):
             raise Exception("Could not start prompt API server")
 
+        # Placeholder for a GUI-controlled camera.
+        self.camera = None
+
     @Slot(None)
     def handleConnection(self):
         s = self.server.nextPendingConnection()
@@ -47,12 +52,14 @@ class PromptApi(QObject):
         success = True
         error = None
         try:
-            # TODO: Command(s?) for local capture -- Andor Zyla camera via pylablib
             if command == "confirmation_prompt":
                 text = request["text"]
                 prompt = ConfirmationPrompt(self.parent(), text)
                 success = bool(prompt.exec_())
             elif command == "camera_setup_and_start":
+                # Start local camera control.
+                # If configured, this is typically called at the beginning of an image sequence.
+                # This enables usage of cameras that are unsupported directly on the Pi.
                 if self.camera is None:
                     # This is slow, so only import when needed -- a HAL with its own camera will never call this.
                     from pylablib.devices import Andor
@@ -72,33 +79,56 @@ class PromptApi(QObject):
                     # Image format settings.
                     # Available values are "100 MHz" and "270 MHz", which appear to be halved from the "200 MHz" and "540 MHz" options present in the GUI.
                     self.camera.cav["PixelReadoutRate"] = "100 MHz"
-                    self.camera.cav["BitDepth"] = "16 Bit"
+                    self.camera.cav["PixelEncoding"] = "Mono16"
 
-                    # The HAL should call `camera_stop_and_save` at the end of each image sequence.
-                    # "sequence" corresponds to video mode. The camera will still only capture on the external trigger.
+                    # "sequence" corresponds to video mode. The camera will still only capture on the external trigger but we will not have to arm before each capture.
                     # A typical image sequence is only 4 images long, but let's leave lots of room for exceptional cases.
-                    self.camera.setup_acquisition(mode="sequence", nframes=128)
+                    self.camera.setup_acquisition(mode="sequence", nframes=32)
 
                 exposure_ms = int(request["camera_parameters"]["exposure_time_ms"])
                 self.camera.set_exposure(exposure_ms / 1000)
 
                 self.camera.start_acquisition()
-            elif command == "camera_stop_and_save":
-                if self.camera is None or not self.camera.cav["CameraAcquiring"]:
+
+                # Acquisition is not immediately running after start_acquisition, and there doesn't appear to be a good way to wait for it to be ready.
+                # If we proceed without waiting, the GPIO trigger will fire before the camera is ready, causing the protocol to fail.
+                time.sleep(0.5)
+            elif command == "camera_wait":
+                # Expect and process an image from the local camera.
+                # This is optional, but calling this during a sequence enables image preview.
+                if self.camera is None or not self.camera.acquisition_in_progress():
                     raise Exception("Camera not configured")
 
-                # TODO: Wait until all of the images we care about are available?
-                # Need to guess how long (not great) or have the HAL tell us how many images to expect
-                # It may make more sense to just save after each capture, which will also enable immediate preview
-                images = self.camera.read_multiple_images()
-                # TODO: Save the images
-                # TODO: Preview them?
+                path = request.get("path")
+
+                # TODO: This hangs the UI until the frame arrives
+                self.camera.wait_for_frame()
+                image = Image.fromarray(self.camera.read_oldest_image())
+                if path:
+                    image.save(path)
+                # TODO: Preview the image -- maybe use PIL's native ImageQt support 
+            elif command == "camera_stop_and_save":
+                # Stop the local camera, saving any remaining images.
+                # If configured, this is typically called at the end of an image sequence.
+                if self.camera is None or not self.camera.acquisition_in_progress():
+                    raise Exception("Camera not configured")
+
+                path = request.get("path")
+
+                # There *shouldn't* be any images left, but try to retrieve them just in case.
+                # This is nonblocking.
+                for image_index, image_arr in enumerate(self.camera.read_multiple_images()):
+                    image = Image.fromarray(image_arr)
+                    if path:
+                        image.save(f"{path}-{image_index}.tif")
+                    # TODO: Preview the image -- maybe use PIL's native ImageQt support
                 self.camera.stop_acquisition()
             else:
                 raise ValueError(f"Unknown command {command}")
         except Exception as e:
             success = False
             error = str(e)
+            print(e)
 
         response = {
             "success": success,

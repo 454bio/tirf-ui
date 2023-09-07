@@ -66,25 +66,18 @@ class ManualControlsWidget(QWidget):
         filterServoControl = False
         maxLedFlashMs = 5000
 
-        # Get the HAL and populate the status bar.
-        statusBarText: List[str] = []
-        permanentStatusBarText: List[str] = [f"GUI v{VERSION}"]
         if self.halThread.hal is not None:
             # We need this data to open the window, so it's okay that it's blocking.
             # If we can't talk to the HAL, nothing else will work, so it's okay that failure here is fatal.
+            # TODO: Get these from the caller if possible rather than calling the HAL ourselves
             halMetadata = self.halThread.hal.run_command({
                 "command": "get_metadata",
                 "args": {}
             })
-            permanentStatusBarText.append(f"Unit {halMetadata['serial_number'][-8:]}")
-            permanentStatusBarText.append(f"HAL v{halMetadata['hal_version']}")
             filterServoControl = boost_bool(halMetadata["filter_servo_control"])
             cameraOptions = halMetadata.get("camera_options")
             if cameraOptions:
                 maxLedFlashMs = int(cameraOptions["shutter_time_ms"])
-                statusBarText.append(f"Shutter time {maxLedFlashMs} ms")
-        else:
-            permanentStatusBarText.append("Mock mode (no HAL)")
 
         self.startButtons: List[QPushButton] = []
         self.stopButton = QPushButton("Cancel manual operation")
@@ -220,8 +213,9 @@ class ManualControlsWidget(QWidget):
             print("No flashes configured, not flashing")
             return
 
-        # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
+        # TODO: Request a larger preview (0.5x rather than 0.125x?)
         if capture:
+            # TODO: Should save the images somewhere by default
             self.halThread.runCommand({
                 "command": "run_image_sequence",
                 "args": {
@@ -255,7 +249,7 @@ class ManualControlsWidget(QWidget):
             print("Cleaving duration == 0, not cleaving")
             return
 
-        # TODO: Request a larger preview (0.5x rather than 0.125x?) and no image saving
+        # TODO: Request a larger preview (0.5x rather than 0.125x?)
         self.halThread.runCommand({
             "command": "cleave",
             "args": {

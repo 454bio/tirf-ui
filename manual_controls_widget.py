@@ -1,5 +1,6 @@
 import sys
 import time
+from enum import Enum
 from functools import partial
 from typing import Dict, List, Optional
 
@@ -10,11 +11,15 @@ from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLay
 import ip_utils
 from hal import boost_bool, Hal
 from sequencing_protocol import MAX_TEMPERATURE_HOLD_S, MAX_TEMPERATURE_WAIT_S
-from version import VERSION
 
 WINDOW_TITLE = "454 Image Preview"
 HAL_PORT = 45400
 MOCK_WARNING_TEXT = f"No HAL on port {HAL_PORT}, running in mock mode"
+
+class FlashMode(Enum):
+    FLASH_ONLY = 0
+    CAPTURE_ONE = 1
+    LIVE_PREVIEW = 2
 
 class HalThread(QThread):
     def __init__(self, halAddress):
@@ -85,26 +90,27 @@ class ManualControlsWidget(QWidget):
 
         # Generate the controls for each LED.
         # This cannot be rolled into the `for` loop below because Python's late-binding will result in the connections being crossed.
-        def make_led_controls(colorName: str, text: Optional[str] = None, maxTimeMs=maxLedFlashMs) -> List[QWidget]:
+        def make_labeled_slider_controls(labelText: str, unitText: str, valueMax: int, defaultValue: int = 0) -> List[QWidget]:
             # TODO: Make some part of this the corresponding color
             widgets: List[QWidget] = []
-            widgets.append(QLabel(text if text is not None else colorName.capitalize()))
+            widgets.append(QLabel(labelText))
 
-            durationSlider = QSlider(Qt.Horizontal)
-            widgets.append(durationSlider)
-            durationSlider.setRange(0, maxTimeMs)
+            sliderWidget = QSlider(Qt.Horizontal)
+            widgets.append(sliderWidget)
+            sliderWidget.setRange(0, valueMax)
 
-            durationNumber = QLineEdit()
-            widgets.append(durationNumber)
-            durationNumber.setMaximumWidth(50)
-            durationNumber.setValidator(QIntValidator())
-            durationNumber.setAlignment(Qt.AlignRight)
-            durationNumber.setText("0")
+            numberWidget = QLineEdit()
+            widgets.append(numberWidget)
+            numberWidget.setMaximumWidth(50)
+            numberWidget.setValidator(QIntValidator())
+            numberWidget.setAlignment(Qt.AlignRight)
+            numberWidget.setText(str(defaultValue))
+            sliderWidget.setSliderPosition(defaultValue)
 
-            widgets.append(QLabel("ms"))
+            widgets.append(QLabel(unitText))
 
-            durationNumber.textChanged.connect(lambda x: durationSlider.setValue(int(x)))
-            durationSlider.sliderMoved.connect(lambda x: durationNumber.setText(str(x)))
+            numberWidget.textChanged.connect(lambda x: sliderWidget.setValue(int(x)))
+            sliderWidget.sliderMoved.connect(lambda x: numberWidget.setText(str(x)))
 
             return widgets
 
@@ -112,9 +118,9 @@ class ManualControlsWidget(QWidget):
         ledControlsLayout = QGridLayout()
         self.durationNumbers: Dict[str, QLineEdit] = {}
         for colorIndex, colorName in enumerate(["red", "orange", "green", "blue"]):
-            for widgetIndex, widget in enumerate(make_led_controls(colorName)):
+            for widgetIndex, widget in enumerate(make_labeled_slider_controls(colorName.capitalize(), "ms", maxLedFlashMs)):
                 if isinstance(widget, QLineEdit):
-                    # Hold on to the text inputs so we can retrieve their values on `capture()`.
+                    # Hold on to the text inputs so we can retrieve their values on `flash()`.
                     # TODO: Will need a different way of doing this if there is ever another QLineEdit here
                     self.durationNumbers[colorName] = widget
                 ledControlsLayout.addWidget(widget, colorIndex, widgetIndex)
@@ -128,9 +134,9 @@ class ManualControlsWidget(QWidget):
             pass
 
         flashButton = QPushButton("Flash")
-        flashButton.clicked.connect(partial(self.flash, False))
+        flashButton.clicked.connect(partial(self.flash, FlashMode.FLASH_ONLY))
         captureNowButton = QPushButton("Capture")
-        captureNowButton.clicked.connect(partial(self.flash, True))
+        captureNowButton.clicked.connect(partial(self.flash, FlashMode.CAPTURE_ONE))
         self.startButtons.append(flashButton)
         self.startButtons.append(captureNowButton)
         ledStartButtonsLayout = QHBoxLayout()
@@ -138,6 +144,22 @@ class ManualControlsWidget(QWidget):
         ledStartButtonsLayout.addWidget(captureNowButton)
         ledStartButtonsWidget = QWidget()
         ledStartButtonsWidget.setLayout(ledStartButtonsLayout)
+
+        # Live preview controls.
+        livePreviewLayout = QHBoxLayout()
+        # TODO: Gate whether the exposure time controls are visible based on the camera type
+        for widget in make_labeled_slider_controls("Live preview exposure time", "ms", valueMax=1000, defaultValue=1000):
+            if isinstance(widget, QLineEdit):
+                # Hold on to the text input so we can retrieve its value on `flash()`.
+                # TODO: Will need a different way of doing this if there is ever another QLineEdit here
+                self.livePreviewNumber = widget
+            livePreviewLayout.addWidget(widget)
+        startLivePreviewButton = QPushButton("Start live preview")
+        startLivePreviewButton.clicked.connect(partial(self.flash, FlashMode.LIVE_PREVIEW))
+        livePreviewLayout.addWidget(startLivePreviewButton)
+        self.startButtons.append(startLivePreviewButton)
+        livePreviewWidget = QWidget()
+        livePreviewWidget.setLayout(livePreviewLayout)
 
         # Temperature controls.
         self.temperatureNumber = QLineEdit()
@@ -161,7 +183,7 @@ class ManualControlsWidget(QWidget):
 
         # UV cleaving controls.
         uvCleavingControlsLayout = QHBoxLayout()
-        for widget in make_led_controls("uv", text="UV", maxTimeMs=5000):
+        for widget in make_labeled_slider_controls("UV", "ms", valueMax=5000):
             if isinstance(widget, QLineEdit):
                 # Hold on to the text input so we can retrieve their values on `cleave()`.
                 # TODO: Will need a different way of doing this if there is ever another QLineEdit here
@@ -180,6 +202,7 @@ class ManualControlsWidget(QWidget):
         if filterServoPicker:
             mainLayout.addWidget(filterServoPicker)
         mainLayout.addWidget(ledStartButtonsWidget)
+        mainLayout.addWidget(livePreviewWidget)
         mainLayout.addWidget(temperatureControlsWidget)
         mainLayout.addWidget(uvCleavingControlsWidget)
         mainLayout.addWidget(self.stopButton)
@@ -199,22 +222,32 @@ class ManualControlsWidget(QWidget):
             button.setEnabled(running)
 
     @Slot(None)
-    def flash(self, capture: bool):
+    def flash(self, flashMode: FlashMode):
+        livePreviewExposureTimeMs = int(self.livePreviewNumber.text())
+
         flashes = []
         for colorName, widget in self.durationNumbers.items():
             duration_ms = int(widget.text())
+            if flashMode == FlashMode.LIVE_PREVIEW:
+                duration_ms = min(duration_ms, livePreviewExposureTimeMs)
             if duration_ms > 0:
                 flashes.append({
                     "led": colorName,
                     "duration_ms": duration_ms
                 })
 
-        if not flashes:
-            print("No flashes configured, not flashing")
-            return
-
         # TODO: Request a larger preview (0.5x rather than 0.125x?)
-        if capture:
+        if flashMode == FlashMode.FLASH_ONLY:
+            if not flashes:
+                print("No flashes configured, not flashing")
+                return
+            self.halThread.runCommand({
+                "command": "flash_leds",
+                "args": {
+                    "flashes": flashes
+                }
+            })
+        elif flashMode == FlashMode.CAPTURE_ONE:
             # TODO: Should save the images somewhere by default
             self.halThread.runCommand({
                 "command": "run_image_sequence",
@@ -233,13 +266,28 @@ class ManualControlsWidget(QWidget):
                     }
                 }
             })
-        else:
+        elif flashMode == FlashMode.LIVE_PREVIEW:
             self.halThread.runCommand({
-                "command": "flash_leds",
+                "command": "run_live_preview",
                 "args": {
-                    "flashes": flashes
+                    "sequence": {
+                        "label": "Preview sequence",
+                        "schema_version": 0,
+                        "images": [
+                            {
+                                "label": "Preview image",
+                                "flashes": flashes,
+                                # TODO: Retrieve the selected filter from the UI
+                                "filter": "any_filter"
+                            }
+                        ]
+                    },
+                    "exposure_time_ms_override": livePreviewExposureTimeMs
                 }
             })
+        else:
+            print("Unknown flash mode, not flashing")
+            return
 
     @Slot(None)
     def cleave(self):

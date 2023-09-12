@@ -87,7 +87,7 @@ class ManualControlsWidget(QWidget):
                 maxLedFlashMs = int(cameraOptions["shutter_time_ms"])
 
         # Make sure we have somewhere to save manually-captured images
-        MANUAL_OUTPUT_DIR.mkdir(parents=True)
+        MANUAL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
         self.startButtons: List[QPushButton] = []
         self.stopButton = QPushButton("Cancel manual operation")

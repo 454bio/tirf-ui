@@ -8,15 +8,8 @@ from PySide2.QtGui import QImage
 from PySide2.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
 
-# Gaslight PIL into thinking that PySide2 is PySide6.
-# PySide6 is not available on Raspbian Bullseye, but the API is close enough that this works.
-from PySide2 import QtCore, QtGui
-import sys
-sys.modules["PySide6.QtCore"] = QtCore
-sys.modules["PySide6.QtGui"] = QtGui
-from PIL import Image, ImageQt
-
 import ip_utils
+from pil_wrapper import Image, ImageQt
 
 ENCODING = "utf-8"
 PROMPT_PORT = 45402

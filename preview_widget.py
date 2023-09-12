@@ -1,15 +1,14 @@
-from pathlib import Path
-from typing import List
 import math
 import socket
 import time
 import traceback
+import sys
 
 import bitstruct
 
 from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QImage, QPixmap
-from PySide2.QtWidgets import QGridLayout, QLabel, QWidget
+from PySide2.QtWidgets import QApplication, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
 PREVIEW_ROWS = 2
 PREVIEW_COLS = 2
@@ -59,24 +58,28 @@ class PreviewThread(QThread):
         return QImage(image_bytes, width, height, align_ceil_32(width*3), QImage.Format(imageFormat))
 
 class PreviewWidget(QWidget):
-    def __init__(self, rows: int = PREVIEW_ROWS, cols: int = PREVIEW_COLS):
+    def __init__(self):
         super().__init__()
 
-        self.rows = rows
-        self.cols = cols
-        self.frame = 0
+        # The image itself
+        self.label = QLabel()
+        # TODO: Size?
+        self.label.setMinimumSize(253, 190)
 
-        # Set up UI...
-        layout = QGridLayout()
-        self.labels: List[QLabel] = []
-        for i in range(self.rows * self.cols):
-            label = QLabel()
-            # TODO: Size?
-            label.setMinimumSize(253, 190)
-            self.labels.append(label)
-            layout.addWidget(label, i // self.rows, i % self.cols)
+        # Image adjustments
+        whiteLevelSlider = QSlider()
+        blackLevelSlider = QSlider()
+        levelsLayout = QVBoxLayout()
+        levelsLayout.addWidget(whiteLevelSlider)
+        levelsLayout.addWidget(blackLevelSlider)
+        levelsWidget = QWidget()
+        levelsWidget.setLayout(levelsLayout)
 
-        self.setLayout(layout)
+        mainLayout = QHBoxLayout()
+        mainLayout.addWidget(self.label)
+        mainLayout.addWidget(levelsWidget)
+
+        self.setLayout(mainLayout)
 
     def connectToHal(self, previewAddress: str, previewPort: int):
         self.socketThread = PreviewThread(previewAddress, previewPort)
@@ -85,6 +88,11 @@ class PreviewWidget(QWidget):
 
     @Slot(QImage)
     def showImage(self, image: QImage):
-        label = self.labels[self.frame % (self.rows * self.cols)]
-        label.setPixmap(QPixmap.fromImage(image))
-        self.frame += 1
+        self.label.setPixmap(QPixmap.fromImage(image))
+
+if __name__ == "__main__":
+    app = QApplication()
+    previewWidget = PreviewWidget()
+    # TODO: Load a QImage from somewhere (path from argv?) and pass it showImage
+    previewWidget.show()
+    sys.exit(app.exec_())

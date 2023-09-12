@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 from PySide2.QtCore import Slot, QThread, Qt
 from PySide2.QtGui import QDoubleValidator, QIntValidator
-from PySide2.QtWidgets import QApplication, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QVBoxLayout, QWidget
+from PySide2.QtWidgets import QApplication, QCheckBox, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QVBoxLayout, QWidget
 
 import ip_utils
 from hal import boost_bool, Hal
@@ -90,7 +90,7 @@ class ManualControlsWidget(QWidget):
 
         # Generate the controls for each LED.
         # This cannot be rolled into the `for` loop below because Python's late-binding will result in the connections being crossed.
-        def make_labeled_slider_controls(labelText: str, unitText: str, valueMax: int, defaultValue: int = 0) -> List[QWidget]:
+        def make_labeled_slider_controls(labelText: str, unitText: str, valueMax: int, defaultValue: int = 0, checkbox: bool = True) -> List[QWidget]:
             # TODO: Make some part of this the corresponding color
             widgets: List[QWidget] = []
             widgets.append(QLabel(labelText))
@@ -112,17 +112,29 @@ class ManualControlsWidget(QWidget):
             numberWidget.textChanged.connect(lambda x: sliderWidget.setValue(int(x)))
             sliderWidget.sliderMoved.connect(lambda x: numberWidget.setText(str(x)))
 
+            if checkbox:
+                enableCheckbox = QCheckBox()
+                def enable_disable_widgets(enable: bool):
+                    numberWidget.setEnabled(enable)
+                    sliderWidget.setEnabled(enable)
+                enableCheckbox.stateChanged.connect(lambda x: enable_disable_widgets(x == Qt.Checked))
+                enableCheckbox.stateChanged.emit(Qt.Unchecked)
+                widgets.append(enableCheckbox)
+
             return widgets
 
         # LED controls.
         ledControlsLayout = QGridLayout()
         self.durationNumbers: Dict[str, QLineEdit] = {}
+        self.durationCheckboxes: Dict[str, QCheckBox] = {}
         for colorIndex, colorName in enumerate(["red", "orange", "green", "blue"]):
             for widgetIndex, widget in enumerate(make_labeled_slider_controls(colorName.capitalize(), "ms", maxLedFlashMs)):
                 if isinstance(widget, QLineEdit):
                     # Hold on to the text inputs so we can retrieve their values on `flash()`.
                     # TODO: Will need a different way of doing this if there is ever another QLineEdit here
                     self.durationNumbers[colorName] = widget
+                elif isinstance(widget, QCheckBox):
+                    self.durationCheckboxes[colorName] = widget
                 ledControlsLayout.addWidget(widget, colorIndex, widgetIndex)
         ledControlsWidget = QWidget()
         ledControlsWidget.setLayout(ledControlsLayout)
@@ -148,7 +160,7 @@ class ManualControlsWidget(QWidget):
         # Live preview controls.
         livePreviewLayout = QHBoxLayout()
         # TODO: Gate whether the exposure time controls are visible based on the camera type
-        for widget in make_labeled_slider_controls("Live preview exposure time", "ms", valueMax=1000, defaultValue=1000):
+        for widget in make_labeled_slider_controls("Live preview exposure time", "ms", valueMax=1000, defaultValue=1000, checkbox=False):
             if isinstance(widget, QLineEdit):
                 # Hold on to the text input so we can retrieve its value on `flash()`.
                 # TODO: Will need a different way of doing this if there is ever another QLineEdit here
@@ -183,7 +195,7 @@ class ManualControlsWidget(QWidget):
 
         # UV cleaving controls.
         uvCleavingControlsLayout = QHBoxLayout()
-        for widget in make_labeled_slider_controls("UV", "ms", valueMax=5000):
+        for widget in make_labeled_slider_controls("UV", "ms", valueMax=5000, checkbox=False):
             if isinstance(widget, QLineEdit):
                 # Hold on to the text input so we can retrieve their values on `cleave()`.
                 # TODO: Will need a different way of doing this if there is ever another QLineEdit here
@@ -230,7 +242,7 @@ class ManualControlsWidget(QWidget):
             duration_ms = int(widget.text())
             if flashMode == FlashMode.LIVE_PREVIEW:
                 duration_ms = min(duration_ms, livePreviewExposureTimeMs)
-            if duration_ms > 0:
+            if self.durationCheckboxes[colorName].isChecked() and duration_ms > 0:
                 flashes.append({
                     "led": colorName,
                     "duration_ms": duration_ms

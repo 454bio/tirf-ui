@@ -2,6 +2,7 @@ import sys
 import time
 from enum import Enum
 from functools import partial
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from PySide2.QtCore import Slot, QThread, Qt
@@ -14,6 +15,7 @@ from sequencing_protocol import MAX_TEMPERATURE_HOLD_S, MAX_TEMPERATURE_WAIT_S
 
 WINDOW_TITLE = "454 Image Preview"
 HAL_PORT = 45400
+MANUAL_OUTPUT_DIR = Path.home() / "454" / "output" / "manual"
 MOCK_WARNING_TEXT = f"No HAL on port {HAL_PORT}, running in mock mode"
 
 class FlashMode(Enum):
@@ -83,6 +85,9 @@ class ManualControlsWidget(QWidget):
             cameraOptions = halMetadata.get("camera_options")
             if cameraOptions:
                 maxLedFlashMs = int(cameraOptions["shutter_time_ms"])
+
+        # Make sure we have somewhere to save manually-captured images
+        MANUAL_OUTPUT_DIR.mkdir(parents=True)
 
         self.startButtons: List[QPushButton] = []
         self.stopButton = QPushButton("Cancel manual operation")
@@ -225,8 +230,6 @@ class ManualControlsWidget(QWidget):
         self.halThread.finished.connect(partial(self.setStartButtonsEnabled, True))
         self.setStartButtonsEnabled(True)
 
-        # TODO: Loop that actually talks to the HAL -- it can probably just be a QTimer connected to `capture`
-
     def setStartButtonsEnabled(self, running: bool):
         self.stopButton.setEnabled(not running)
 
@@ -275,7 +278,8 @@ class ManualControlsWidget(QWidget):
                                 "filter": "any_filter"
                             }
                         ]
-                    }
+                    },
+                    "output_dir": str(MANUAL_OUTPUT_DIR)
                 }
             })
         elif flashMode == FlashMode.LIVE_PREVIEW:

@@ -63,8 +63,8 @@ class PreviewWidget(QWidget):
 
         # The image itself
         self.label = QLabel()
-        # TODO: Size?
-        self.label.setMinimumSize(253, 190)
+        # TODO: Size? It will automatically be resized once some images come
+        self.label.setMinimumSize(1014, 760)
 
         # Image adjustments
         whiteLevelSlider = QSlider()

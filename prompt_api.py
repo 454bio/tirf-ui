@@ -4,12 +4,11 @@ import time
 from functools import partial
 
 from PySide2.QtCore import Signal, Slot, QObject
-from PySide2.QtGui import QImage
 from PySide2.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
 
 import ip_utils
-from pil_wrapper import Image, ImageQt
+from pil_wrapper import Image
 
 ENCODING = "utf-8"
 PROMPT_PORT = 45402
@@ -28,7 +27,7 @@ class ConfirmationPrompt(QDialog):
         self.setLayout(layout)
 
 class PromptApi(QObject):
-    received_image = Signal(QImage)
+    received_image = Signal(Image)
 
     def __init__(self, parent, port=PROMPT_PORT):
         super().__init__(parent)
@@ -109,7 +108,8 @@ class PromptApi(QObject):
                 image = Image.fromarray(self.camera.read_oldest_image())
                 if path:
                     image.save(path)
-                self.received_image.emit(ImageQt.ImageQt(image.resize((512, 512), Image.Resampling.NEAREST)))
+                # TODO: This needs to emit a PIL image instead
+                self.received_image.emit(image)
             elif command == "camera_stop_and_save":
                 # Stop the local camera, saving any remaining images.
                 # If configured, this is typically called at the end of an image sequence.
@@ -124,7 +124,7 @@ class PromptApi(QObject):
                     image = Image.fromarray(image_arr)
                     if path:
                         image.save(f"{path}-{image_index}.tif")
-                    self.received_image.emit(ImageQt.ImageQt(image.resize((512, 512), Image.Resampling.NEAREST)))
+                    self.received_image.emit(image)
                 self.camera.stop_acquisition()
             else:
                 raise ValueError(f"Unknown command {command}")

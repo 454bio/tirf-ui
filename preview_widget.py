@@ -3,13 +3,14 @@ import socket
 import time
 import traceback
 import sys
-from typing import Optional
+from functools import partial
+from typing import Optional, Tuple
 
 import bitstruct
 
 from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QImage, QPixmap
-from PySide2.QtWidgets import QApplication, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
+from PySide2.QtWidgets import QApplication, QHBoxLayout, QLabel, QScrollArea, QScrollBar, QSlider, QStyle, QToolButton, QVBoxLayout, QWidget
 
 from pil_wrapper import Image, ImageQt
 
@@ -67,6 +68,7 @@ class PreviewThread(QThread):
 class PreviewWidget(QWidget):
     DEFAULT_MIN_LEVEL = 0
     DEFAULT_MAX_LEVEL = 1 << 8
+    ZOOM_LEVELS = [10, 25, 50, 100, 200, 300, 400]
 
     def __init__(self):
         super().__init__()
@@ -75,9 +77,18 @@ class PreviewWidget(QWidget):
 
         # The image itself
         self.label = QLabel()
-        # TODO: Will probably want this to be in a scroll view or similar
+        self.scrollArea = QScrollArea()
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setWidget(self.label)
 
-        # Image adjustments
+        # Keep scroll relative position across resizes
+        self.lastRanges = [(0,0), [0,0]]  # [(horizontal min and max), (vertical min and max)]
+        horizontalScrollBar = self.scrollArea.horizontalScrollBar()
+        horizontalScrollBar.rangeChanged.connect(partial(self.keepRelativeScrollPosition, horizontalScrollBar, 0))
+        verticalScrollBar = self.scrollArea.verticalScrollBar()
+        horizontalScrollBar.rangeChanged.connect(partial(self.keepRelativeScrollPosition, verticalScrollBar, 1))
+
+        # Levels adjustment
         self.whiteLevelSlider = QSlider()
         self.whiteLevelSlider.setRange(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL)
         self.whiteLevelSlider.setValue(self.DEFAULT_MAX_LEVEL)
@@ -86,15 +97,32 @@ class PreviewWidget(QWidget):
         self.blackLevelSlider.setValue(self.DEFAULT_MIN_LEVEL)
         self.whiteLevelSlider.sliderMoved.connect(self.drawImage)
         self.blackLevelSlider.sliderMoved.connect(self.drawImage)
-        levelsLayout = QVBoxLayout()
-        levelsLayout.addWidget(self.whiteLevelSlider)
-        levelsLayout.addWidget(self.blackLevelSlider)
-        levelsWidget = QWidget()
-        levelsWidget.setLayout(levelsLayout)
+
+        # Zoom controls
+        # TODO: Keyboard shortcuts?
+        self.zoomInButton = QToolButton()
+        self.zoomInButton.setText("+")
+        self.zoomInButton.clicked.connect(partial(self.adjustZoom, True))
+        self.zoomOutButton = QToolButton()
+        self.zoomOutButton.setText("-")
+        self.zoomOutButton.clicked.connect(partial(self.adjustZoom, False))
+        self.zoomLevelLabel = QLabel("50%")
+        zoomLabelFont = self.zoomLevelLabel.font()
+        zoomLabelFont.setPointSize(8)
+        self.zoomLevelLabel.setFont(zoomLabelFont)
+
+        adjustmentsLayout = QVBoxLayout()
+        adjustmentsLayout.addWidget(self.whiteLevelSlider)
+        adjustmentsLayout.addWidget(self.blackLevelSlider)
+        adjustmentsLayout.addWidget(self.zoomInButton)
+        adjustmentsLayout.addWidget(self.zoomOutButton)
+        adjustmentsLayout.addWidget(self.zoomLevelLabel)
+        adjustmentsWidget = QWidget()
+        adjustmentsWidget.setLayout(adjustmentsLayout)
 
         mainLayout = QHBoxLayout()
-        mainLayout.addWidget(self.label)
-        mainLayout.addWidget(levelsWidget)
+        mainLayout.addWidget(self.scrollArea)
+        mainLayout.addWidget(adjustmentsWidget)
 
         self.setLayout(mainLayout)
 
@@ -108,6 +136,43 @@ class PreviewWidget(QWidget):
     @Slot(Image.Image)
     def showImage(self, image: Image.Image):
         self.sourceImage = image
+        self.drawImage()
+
+    def keepRelativeScrollPosition(self, scrollBar: QScrollBar, whichRange: int, newMin: int, newMax: int):
+        oldMin = self.lastRanges[whichRange][0]
+        oldMax = self.lastRanges[whichRange][1]
+        oldSize = oldMax - oldMin
+
+        try:
+            relativePosition = (scrollBar.value() - oldMin) / oldSize
+
+            newSize = newMax - newMin
+            scrollBar.setValue(int(relativePosition * newSize + newMin))
+        except ZeroDivisionError:
+            # On initialization everything is zero. That's okay.
+            pass
+        finally:
+            self.lastRanges[whichRange] = (newMin, newMax)
+
+    @Slot(bool)
+    def adjustZoom(self, zoomIn: bool):
+        currentZoomLevel = int(self.zoomLevelLabel.text().strip("%"))
+        currentZoomIndex = self.ZOOM_LEVELS.index(currentZoomLevel)
+        targetZoomIndex = currentZoomIndex + (1 if zoomIn else -1)
+
+        if targetZoomIndex+1 >= len(self.ZOOM_LEVELS):
+            self.zoomInButton.setEnabled(False)
+            self.zoomOutButton.setEnabled(True)
+        elif targetZoomIndex-1 < 0:
+            self.zoomInButton.setEnabled(True)
+            self.zoomOutButton.setEnabled(False)
+        else:
+            self.zoomInButton.setEnabled(True)
+            self.zoomOutButton.setEnabled(True)
+
+        targetZoomLevel = self.ZOOM_LEVELS[targetZoomIndex]
+        self.zoomLevelLabel.setText(f"{targetZoomLevel}%")
+
         self.drawImage()
 
     def drawImage(self):
@@ -130,8 +195,9 @@ class PreviewWidget(QWidget):
             return val
         image = Image.eval(image, recolor)
 
-        # TODO: Apply zoom
-        image = image.resize((512, 512))
+        currentZoomLevel = int(self.zoomLevelLabel.text().strip("%"))
+        zoomedSize: Tuple[int, int] = tuple(int(currentZoomLevel / 100 * x) for x in image.size)
+        image = image.resize(zoomedSize)
 
         # The image will have to be converted to 8-bit for Qt as well.
         # No need to do it again though.

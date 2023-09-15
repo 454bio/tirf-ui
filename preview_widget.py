@@ -64,8 +64,8 @@ class PreviewThread(QThread):
 
 class PreviewWidget(QWidget):
     DEFAULT_MIN_LEVEL = 0
-    DEFAULT_MAX_LEVEL = 1 << 16
-    ZOOM_LEVELS = [10, 25, 50, 100, 200, 300, 400]
+    DEFAULT_MAX_LEVEL = (1 << 16) - 1
+    ZOOM_LEVELS = [10, 25, 50, 75, 100, 200, 300, 400]
 
     def __init__(self):
         super().__init__()
@@ -86,7 +86,7 @@ class PreviewWidget(QWidget):
         horizontalScrollBar.rangeChanged.connect(partial(self.keepRelativeScrollPosition, verticalScrollBar, 1))
 
         # Levels adjustment
-        self.levelsLut = np.fromiter(map(lambda x: x >> 8, range(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL)), dtype=np.uint8)
+        self.levelsLut = np.fromiter(map(lambda x: x >> 8, range(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL+1)), dtype=np.uint8)
         self.whiteLevelSlider = QSlider()
         self.whiteLevelSlider.setRange(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL)
         self.whiteLevelSlider.setValue(self.DEFAULT_MAX_LEVEL)
@@ -197,7 +197,7 @@ class PreviewWidget(QWidget):
             val = min(val, self.DEFAULT_MAX_LEVEL-1)
             # ... and finally convert to the 8-bit output format.
             return val >> 8
-        self.levelsLut = np.fromiter(map(recolor, range(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL)), dtype=np.uint8)
+        self.levelsLut = np.fromiter(map(recolor, range(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL+1)), dtype=np.uint8)
 
         self.drawImage()
 

@@ -12,7 +12,7 @@ from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QImage, QPixmap
 from PySide2.QtWidgets import QApplication, QHBoxLayout, QLabel, QScrollArea, QScrollBar, QSlider, QToolButton, QVBoxLayout, QWidget
 
-from pil_wrapper import Image, ImageQt
+from pil_wrapper import Image, ImageOps, ImageQt
 
 PREVIEW_HEADER_FORMAT = "u4u12u12u6u26"
 PREVIEW_HEADER_SIZE = math.ceil(bitstruct.calcsize(PREVIEW_HEADER_FORMAT) / 8)
@@ -229,6 +229,9 @@ class PreviewWidget(QWidget):
         currentZoomLevel = int(self.zoomLevelLabel.text().strip("%"))
         zoomedSize: Tuple[int, int] = tuple(int(currentZoomLevel / 100 * x) for x in image.size)
         image = image.resize(zoomedSize)
+
+        # Flip to match SOLIS output
+        image = ImageOps.flip(image)
 
         # The image will have to be converted to 8-bit for Qt as well.
         # No need to do it again though.

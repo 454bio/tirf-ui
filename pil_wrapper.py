@@ -4,4 +4,4 @@ from PySide2 import QtCore, QtGui
 import sys
 sys.modules["PySide6.QtCore"] = QtCore
 sys.modules["PySide6.QtGui"] = QtGui
-from PIL import Image, ImageQt
+from PIL import Image, ImageOps, ImageQt

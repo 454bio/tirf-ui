@@ -27,7 +27,7 @@ class ConfirmationPrompt(QDialog):
         self.setLayout(layout)
 
 class PromptApi(QObject):
-    received_image = Signal(Image)
+    received_image = Signal(Image.Image)
 
     def __init__(self, parent, port=PROMPT_PORT):
         super().__init__(parent)

@@ -362,8 +362,7 @@ if __name__ == "__main__":
     if ip_utils.exists(halAddress, HAL_PORT):
         # Only need the prompt API if we're connecting to a HAL.
         promptApi = PromptApi(ui)
-        # TODO: This needs to use PIL images instead
-        # promptApi.received_image.connect(ui.previewWidget.showImage)
+        promptApi.received_image.connect(ui.previewWidget.showImage)
     else:
         # Otherwise, we're in mock mode. Make it obvious.
         print(MOCK_WARNING_TEXT)

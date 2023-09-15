@@ -150,6 +150,16 @@ class ManualControlsWidget(QWidget):
             # TODO: Filter controls
             pass
 
+        overrideExposureLayout = QHBoxLayout()
+        for widget in make_labeled_slider_controls("Capture exposure time override", "ms", valueMax=maxLedFlashMs, defaultValue=maxLedFlashMs, checkbox=True):
+            if isinstance(widget, QLineEdit):
+                self.overrideExposureNumber = widget
+            elif isinstance(widget, QCheckBox):
+                self.overrideExposureCheckbox = widget
+            overrideExposureLayout.addWidget(widget)
+        overrideExposureWidget = QWidget()
+        overrideExposureWidget.setLayout(overrideExposureLayout)
+
         flashButton = QPushButton("Flash")
         flashButton.clicked.connect(partial(self.flash, FlashMode.FLASH_ONLY))
         captureNowButton = QPushButton("Capture")
@@ -218,6 +228,7 @@ class ManualControlsWidget(QWidget):
         mainLayout.addWidget(ledControlsWidget)
         if filterServoPicker:
             mainLayout.addWidget(filterServoPicker)
+        mainLayout.addWidget(overrideExposureWidget)
         mainLayout.addWidget(ledStartButtonsWidget)
         mainLayout.addWidget(livePreviewWidget)
         mainLayout.addWidget(temperatureControlsWidget)
@@ -251,6 +262,10 @@ class ManualControlsWidget(QWidget):
                     "duration_ms": duration_ms
                 })
 
+        overrideExposureTimeMsArg = {
+            "exposure_time_ms_override": int(self.overrideExposureNumber.text())
+        } if self.overrideExposureCheckbox.isChecked() else {}
+
         # TODO: Request a larger preview (0.5x rather than 0.125x?)
         if flashMode == FlashMode.FLASH_ONLY:
             if not flashes:
@@ -279,7 +294,8 @@ class ManualControlsWidget(QWidget):
                             }
                         ]
                     },
-                    "output_dir": str(MANUAL_OUTPUT_DIR)
+                    "output_dir": str(MANUAL_OUTPUT_DIR),
+                    **overrideExposureTimeMsArg
                 }
             })
         elif flashMode == FlashMode.LIVE_PREVIEW:

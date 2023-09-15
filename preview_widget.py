@@ -86,6 +86,12 @@ class PreviewWidget(QWidget):
         horizontalScrollBar.rangeChanged.connect(partial(self.keepRelativeScrollPosition, verticalScrollBar, 1))
 
         # Levels adjustment
+        self.whiteLevelLabel = QLabel()
+        levelLabelFont = self.whiteLevelLabel.font()
+        levelLabelFont.setPointSize(6)
+        self.whiteLevelLabel.setFont(levelLabelFont)
+        self.blackLevelLabel = QLabel()
+        self.blackLevelLabel.setFont(levelLabelFont)
         self.levelsLut = np.fromiter(map(lambda x: x >> 8, range(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL+1)), dtype=np.uint8)
         self.whiteLevelSlider = QSlider()
         self.whiteLevelSlider.setRange(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL)
@@ -112,6 +118,8 @@ class PreviewWidget(QWidget):
         adjustmentsLayout = QVBoxLayout()
         adjustmentsLayout.addWidget(self.whiteLevelSlider)
         adjustmentsLayout.addWidget(self.blackLevelSlider)
+        adjustmentsLayout.addWidget(self.whiteLevelLabel)
+        adjustmentsLayout.addWidget(self.blackLevelLabel)
         adjustmentsLayout.addWidget(self.zoomInButton)
         adjustmentsLayout.addWidget(self.zoomOutButton)
         adjustmentsLayout.addWidget(self.zoomLevelLabel)
@@ -189,7 +197,9 @@ class PreviewWidget(QWidget):
 
         # This function creates such a lookup table using the values from the level sliders.
         blackLevel = self.levelLogScale(self.blackLevelSlider.value())
+        self.blackLevelLabel.setText(str(blackLevel))
         whiteLevel = self.levelLogScale(self.whiteLevelSlider.value())
+        self.whiteLevelLabel.setText(str(whiteLevel))
         colorScale = (self.DEFAULT_MAX_LEVEL - self.DEFAULT_MIN_LEVEL) / (whiteLevel - blackLevel)
         def recolor(val: int) -> int:
             # Clamp within the set levels...

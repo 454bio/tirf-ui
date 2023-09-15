@@ -7,10 +7,10 @@ from functools import partial
 from typing import Optional, Tuple
 
 import bitstruct
-
+import numpy as np
 from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QImage, QPixmap
-from PySide2.QtWidgets import QApplication, QHBoxLayout, QLabel, QScrollArea, QScrollBar, QSlider, QStyle, QToolButton, QVBoxLayout, QWidget
+from PySide2.QtWidgets import QApplication, QHBoxLayout, QLabel, QScrollArea, QScrollBar, QSlider, QToolButton, QVBoxLayout, QWidget
 
 from pil_wrapper import Image, ImageQt
 
@@ -64,7 +64,7 @@ class PreviewThread(QThread):
 
 class PreviewWidget(QWidget):
     DEFAULT_MIN_LEVEL = 0
-    DEFAULT_MAX_LEVEL = 1 << 8
+    DEFAULT_MAX_LEVEL = 1 << 16
     ZOOM_LEVELS = [10, 25, 50, 100, 200, 300, 400]
 
     def __init__(self):
@@ -86,14 +86,15 @@ class PreviewWidget(QWidget):
         horizontalScrollBar.rangeChanged.connect(partial(self.keepRelativeScrollPosition, verticalScrollBar, 1))
 
         # Levels adjustment
+        self.levelsLut = np.fromiter(map(lambda x: x >> 8, range(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL)), dtype=np.uint8)
         self.whiteLevelSlider = QSlider()
         self.whiteLevelSlider.setRange(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL)
         self.whiteLevelSlider.setValue(self.DEFAULT_MAX_LEVEL)
         self.blackLevelSlider = QSlider()
         self.blackLevelSlider.setRange(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL)
         self.blackLevelSlider.setValue(self.DEFAULT_MIN_LEVEL)
-        self.whiteLevelSlider.sliderMoved.connect(self.drawImage)
-        self.blackLevelSlider.sliderMoved.connect(self.drawImage)
+        self.whiteLevelSlider.sliderMoved.connect(self.adjustColors)
+        self.blackLevelSlider.sliderMoved.connect(self.adjustColors)
 
         # Zoom controls
         # TODO: Keyboard shortcuts?
@@ -172,25 +173,43 @@ class PreviewWidget(QWidget):
 
         self.drawImage()
 
-    def drawImage(self):
-        if self.sourceImage is None:
-            return
-        
-        # PIL doesn't let us threshold anything other than 8-bit images, so we have to convert *first*.
-        # This unfortunately results in a poorer quality preview and makes it so limit values that don't directly map to the output images.
-        # We also need to do our own 16 to 8 bit scaling.
-        image = Image.eval(self.sourceImage, lambda x: x / self.DEFAULT_MAX_LEVEL).convert("L")
+    @Slot(None)
+    def adjustColors(self):
+        # PIL does not allow most types of basic arithmetic on anything other than 8-bit images.
+        # For something as basic as thresholding, it requires lookup tables (?!)
+        # `class _E` in PIL's Image.py describes the arithemtic supported inside `eval` or `point` on these supposedly "exotic" images.
+        # `def point(` inside `class Image` in PIL's Image.py partially acknowledges this limitation with the following comment:
+        # "I think this prevents us from ever doing a gamma function on > 8bit images."
+        # This behavior is not documented, and should probably be patched upstream to something more reasonable.
 
-        # Apply recoloring
+        # This function creates such a lookup table using the values from the level sliders.
         blackLevel = self.blackLevelSlider.value()
         whiteLevel = self.whiteLevelSlider.value()
         colorScale = (self.DEFAULT_MAX_LEVEL - self.DEFAULT_MIN_LEVEL) / (whiteLevel - blackLevel)
         def recolor(val: int) -> int:
+            # Clamp within the set levels...
             val = max(val, blackLevel)
             val = min(val, whiteLevel)
+            # ... scale it...
             val = int((val - blackLevel) * colorScale)
-            return val
-        image = Image.eval(image, recolor)
+            # ... clamp within the representation limits...
+            val = max(val, self.DEFAULT_MIN_LEVEL)
+            val = min(val, self.DEFAULT_MAX_LEVEL-1)
+            # ... and finally convert to the 8-bit output format.
+            return val >> 8
+        self.levelsLut = np.fromiter(map(recolor, range(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL)), dtype=np.uint8)
+
+        self.drawImage()
+
+    def drawImage(self):
+        if self.sourceImage is None:
+            return
+        
+        # Apply recoloring.
+        # PIL only allows us to use a 16-bit LUT by first converting to a 32-bit image (?!)
+        # `_point(ImagingObject *self, PyObject *args)` in PIL's _imaging.c describes LUT behavior.
+        # This behavior is not documented, and should probably be patched upstream to something more reasonable.
+        image = self.sourceImage.convert("I").point(self.levelsLut, "L")
 
         currentZoomLevel = int(self.zoomLevelLabel.text().strip("%"))
         zoomedSize: Tuple[int, int] = tuple(int(currentZoomLevel / 100 * x) for x in image.size)

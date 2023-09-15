@@ -173,6 +173,11 @@ class PreviewWidget(QWidget):
 
         self.drawImage()
 
+    @staticmethod
+    def levelLogScale(x: int) -> int:
+        # Chosen such that levelLogScale(65536) == 65536
+        return int(2 ** (x / 4096))
+
     @Slot(None)
     def adjustColors(self):
         # PIL does not allow most types of basic arithmetic on anything other than 8-bit images.
@@ -183,8 +188,8 @@ class PreviewWidget(QWidget):
         # This behavior is not documented, and should probably be patched upstream to something more reasonable.
 
         # This function creates such a lookup table using the values from the level sliders.
-        blackLevel = self.blackLevelSlider.value()
-        whiteLevel = self.whiteLevelSlider.value()
+        blackLevel = self.levelLogScale(self.blackLevelSlider.value())
+        whiteLevel = self.levelLogScale(self.whiteLevelSlider.value())
         colorScale = (self.DEFAULT_MAX_LEVEL - self.DEFAULT_MIN_LEVEL) / (whiteLevel - blackLevel)
         def recolor(val: int) -> int:
             # Clamp within the set levels...

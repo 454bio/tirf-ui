@@ -14,9 +14,6 @@ from PySide2.QtWidgets import QApplication, QHBoxLayout, QLabel, QScrollArea, QS
 
 from pil_wrapper import Image, ImageQt
 
-PREVIEW_ROWS = 2
-PREVIEW_COLS = 2
-
 PREVIEW_HEADER_FORMAT = "u4u12u12u6u26"
 PREVIEW_HEADER_SIZE = math.ceil(bitstruct.calcsize(PREVIEW_HEADER_FORMAT) / 8)
 
@@ -191,7 +188,7 @@ class PreviewWidget(QWidget):
         def recolor(val: int) -> int:
             val = max(val, blackLevel)
             val = min(val, whiteLevel)
-            val = int(val * colorScale - blackLevel)
+            val = int((val - blackLevel) * colorScale)
             return val
         image = Image.eval(image, recolor)
 

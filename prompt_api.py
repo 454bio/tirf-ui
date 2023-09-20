@@ -8,7 +8,7 @@ from PySide2.QtNetwork import QHostAddress, QTcpServer, QTcpSocket
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
 
 import ip_utils
-from pil_wrapper import Image
+from pil_wrapper import Image, ImageOps
 
 ENCODING = "utf-8"
 PROMPT_PORT = 45402
@@ -107,6 +107,8 @@ class PromptApi(QObject):
                 # TODO: This hangs the UI until the frame arrives
                 self.camera.wait_for_frame()
                 image = Image.fromarray(self.camera.read_oldest_image())
+                # Flip to match SOLIS output
+                image = ImageOps.flip(image)
                 if path:
                     image.save(path)
                 self.received_image.emit(image)
@@ -122,6 +124,8 @@ class PromptApi(QObject):
                 # This is nonblocking.
                 for image_index, image_arr in enumerate(self.camera.read_multiple_images()):
                     image = Image.fromarray(image_arr)
+                    # Flip to match SOLIS output
+                    image = ImageOps.flip(image)
                     if path:
                         image.save(f"{path}-{image_index}.tif")
                     self.received_image.emit(image)

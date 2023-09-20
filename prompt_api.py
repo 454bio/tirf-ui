@@ -82,6 +82,7 @@ class PromptApi(QObject):
                     # Available values are "100 MHz" and "270 MHz", which appear to be halved from the "200 MHz" and "540 MHz" options present in the GUI.
                     self.camera.cav["PixelReadoutRate"] = "100 MHz"
                     self.camera.cav["PixelEncoding"] = "Mono16"
+                    self.camera.cav["SimplePreAmpGainControl"] = "16-bit (low noise & high well capacity)"
 
                     # "sequence" corresponds to video mode. The camera will still only capture on the external trigger but we will not have to arm before each capture.
                     # A typical image sequence is only 4 images long, but let's leave lots of room for exceptional cases.
@@ -108,7 +109,6 @@ class PromptApi(QObject):
                 image = Image.fromarray(self.camera.read_oldest_image())
                 if path:
                     image.save(path)
-                # TODO: This needs to emit a PIL image instead
                 self.received_image.emit(image)
             elif command == "camera_stop_and_save":
                 # Stop the local camera, saving any remaining images.

@@ -214,7 +214,11 @@ class ManualControlsWidget(QWidget):
             if isinstance(widget, QLineEdit):
                 # Hold on to the text input so we can retrieve their values on `cleave()`.
                 # TODO: Will need a different way of doing this if there is ever another QLineEdit here
-                self.cleavingNumber: QLineEdit = widget
+                self.cleavingDurationNumber: QLineEdit = widget
+            uvCleavingControlsLayout.addWidget(widget)
+        for widget in make_labeled_slider_controls("", "‰", valueMax=1000, defaultValue=1000, checkbox=False):
+            if isinstance(widget, QLineEdit):
+                self.cleavingPwmNumber: QLineEdit = widget
             uvCleavingControlsLayout.addWidget(widget)
         cleaveButton = QPushButton("Cleave")
         cleaveButton.clicked.connect(self.cleave)
@@ -323,10 +327,11 @@ class ManualControlsWidget(QWidget):
 
     @Slot(None)
     def cleave(self):
-        cleavingDurationMs = int(self.cleavingNumber.text())
+        cleavingDurationMs = int(self.cleavingDurationNumber.text())
+        cleavingPwm = int(self.cleavingPwmNumber.text())
 
-        if not cleavingDurationMs:
-            print("Cleaving duration == 0, not cleaving")
+        if not cleavingDurationMs or not cleavingPwm:
+            print("Cleaving duration == 0 or PWM == 0, not cleaving")
             return
 
         # TODO: Request a larger preview (0.5x rather than 0.125x?)
@@ -336,7 +341,8 @@ class ManualControlsWidget(QWidget):
                 "cleave_args": {
                     "schema_version": 0,
                     "capture_period_ms": 0,
-                    "cleaving_duration_ms": cleavingDurationMs
+                    "cleaving_duration_ms": cleavingDurationMs,
+                    "cleaving_intensity_per_mille": cleavingPwm
                 }
             }
         })

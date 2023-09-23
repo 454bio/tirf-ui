@@ -1,3 +1,4 @@
+import io
 import math
 import socket
 import struct
@@ -50,7 +51,7 @@ class PreviewThread(QThread):
         while len(image_bytes) < image_size:
             image_bytes.extend(s.recv(image_size - len(image_bytes)))
 
-        return Image.open(image_bytes)
+        return Image.open(io.BytesIO(image_bytes))
 
 class PreviewWidget(QWidget):
     DEFAULT_MIN_LEVEL = 0

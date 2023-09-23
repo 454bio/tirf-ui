@@ -215,9 +215,8 @@ class SequencingUi(QMainWindow):
     
     def populateWidgets(self, halAddress):
         self.previewWidget = PreviewWidget()
-        # TODO: Re-enable this once Pi camera preview support is rebuilt
-        # if ip_utils.exists(halAddress, PREVIEW_PORT):
-        #     self.previewWidget.connectToHal(halAddress, PREVIEW_PORT)
+        if ip_utils.exists(halAddress, PREVIEW_PORT):
+            self.previewWidget.connectToHal(halAddress, PREVIEW_PORT)
 
         # Create the main elements...
         self.protocolViewer = ProtocolViewer()

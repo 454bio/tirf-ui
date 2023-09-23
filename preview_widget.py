@@ -1,12 +1,12 @@
 import math
 import socket
+import struct
 import time
 import traceback
 import sys
 from functools import partial
 from typing import Optional, Tuple
 
-import bitstruct
 import numpy as np
 from PySide2.QtCore import Signal, Slot, QThread
 from PySide2.QtGui import QImage, QPixmap
@@ -14,15 +14,11 @@ from PySide2.QtWidgets import QApplication, QHBoxLayout, QLabel, QScrollArea, QS
 
 from pil_wrapper import Image, ImageQt
 
-PREVIEW_HEADER_FORMAT = "u4u12u12u6u26"
-PREVIEW_HEADER_SIZE = math.ceil(bitstruct.calcsize(PREVIEW_HEADER_FORMAT) / 8)
-
 def align_ceil_32(unaligned: int):
     return math.ceil(unaligned / 32) * 32
 
 class PreviewThread(QThread):
-    # TODO: This needs to emit a PIL image instead
-    received_image = Signal(QImage)
+    received_image = Signal(Image.Image)
 
     def __init__(self, address: str, port: int):
         super().__init__()
@@ -46,21 +42,15 @@ class PreviewThread(QThread):
                 traceback.print_exc()
                 time.sleep(5)
 
-    def read_preview_image(self, s: socket.socket) -> QImage:
-        # TODO: This could be simplified if the HAL just outputs the TIFF format directly
-        header = s.recv(PREVIEW_HEADER_SIZE)
-        assert len(header) == PREVIEW_HEADER_SIZE
-
-        (version, width, height, imageFormat, image_size) = bitstruct.unpack(PREVIEW_HEADER_FORMAT, header)
-        assert version == 0
+    def read_preview_image(self, s: socket.socket) -> Image.Image:
+        image_size_bytes = s.recv(4)  # 1 uint32_t
+        (image_size,) = struct.unpack("I", image_size_bytes)
 
         image_bytes = bytearray()
         while len(image_bytes) < image_size:
             image_bytes.extend(s.recv(image_size - len(image_bytes)))
 
-        # TODO: QImage segfaults here sometimes (?!)
-        # TODO: Return a PIL image instead
-        return QImage(image_bytes, width, height, align_ceil_32(width*3), QImage.Format(imageFormat))
+        return Image.open(image_bytes)
 
 class PreviewWidget(QWidget):
     DEFAULT_MIN_LEVEL = 0
@@ -133,11 +123,9 @@ class PreviewWidget(QWidget):
         self.setLayout(mainLayout)
 
     def connectToHal(self, previewAddress: str, previewPort: int):
-        # self.socketThread.received_image needs to emit PIL image instead first
-        # self.socketThread = PreviewThread(previewAddress, previewPort)
-        # self.socketThread.received_image.connect(self.showImage)
-        # self.socketThread.start()
-        raise NotImplementedError
+        self.socketThread = PreviewThread(previewAddress, previewPort)
+        self.socketThread.received_image.connect(self.showImage)
+        self.socketThread.start()
 
     @Slot(Image.Image)
     def showImage(self, image: Image.Image):

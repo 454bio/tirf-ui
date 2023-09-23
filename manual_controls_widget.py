@@ -73,6 +73,8 @@ class ManualControlsWidget(QWidget):
         filterServoControl = False
         # Whether we have temperature control.
         temperatureControl = False
+        # Whether we can override the exposure.
+        canOverrideExposure = False
         maxLedFlashMs = 5000
 
         if self.halThread.hal is not None:
@@ -85,6 +87,7 @@ class ManualControlsWidget(QWidget):
             })
             filterServoControl = boost_bool(halMetadata["filter_servo_control"])
             temperatureControl = boost_bool(halMetadata["temperature_control"])
+            canOverrideExposure = boost_bool(halMetadata["can_override_exposure"])
             cameraOptions = halMetadata.get("camera_options")
             if cameraOptions:
                 maxLedFlashMs = int(cameraOptions["shutter_time_ms"])
@@ -177,13 +180,14 @@ class ManualControlsWidget(QWidget):
 
         # Live preview controls.
         livePreviewLayout = QHBoxLayout()
-        # TODO: Gate whether the exposure time controls are visible based on the camera type
-        for widget in make_labeled_slider_controls("Live preview exposure time", "ms", valueMax=1000, defaultValue=1000, checkbox=False):
-            if isinstance(widget, QLineEdit):
-                # Hold on to the text input so we can retrieve its value on `flash()`.
-                # TODO: Will need a different way of doing this if there is ever another QLineEdit here
-                self.livePreviewNumber = widget
-            livePreviewLayout.addWidget(widget)
+        self.livePreviewNumber: Optional[QLineEdit] = None
+        if canOverrideExposure:
+            for widget in make_labeled_slider_controls("Live preview exposure time", "ms", valueMax=1000, defaultValue=1000, checkbox=False):
+                if isinstance(widget, QLineEdit):
+                    # Hold on to the text input so we can retrieve its value on `flash()`.
+                    # TODO: Will need a different way of doing this if there is ever another QLineEdit here
+                    self.livePreviewNumber = widget
+                livePreviewLayout.addWidget(widget)
         startLivePreviewButton = QPushButton("Start live preview")
         startLivePreviewButton.clicked.connect(partial(self.flash, FlashMode.LIVE_PREVIEW))
         livePreviewLayout.addWidget(startLivePreviewButton)
@@ -235,7 +239,8 @@ class ManualControlsWidget(QWidget):
         mainLayout.addWidget(ledControlsWidget)
         if filterServoPicker:
             mainLayout.addWidget(filterServoPicker)
-        mainLayout.addWidget(overrideExposureWidget)
+        if canOverrideExposure:
+            mainLayout.addWidget(overrideExposureWidget)
         mainLayout.addWidget(ledStartButtonsWidget)
         mainLayout.addWidget(livePreviewWidget)
         if temperatureControl:
@@ -257,22 +262,24 @@ class ManualControlsWidget(QWidget):
 
     @Slot(None)
     def flash(self, flashMode: FlashMode):
-        livePreviewExposureTimeMs = int(self.livePreviewNumber.text())
+        overrideExposureTime: Optional[int] = None
+        if flashMode == FlashMode.CAPTURE_ONE and self.overrideExposureCheckbox.isChecked():
+            overrideExposureTime = int(self.overrideExposureNumber.text())
+        elif flashMode == FlashMode.LIVE_PREVIEW and self.livePreviewNumber:
+            overrideExposureTime = int(self.livePreviewNumber.text())
+        overrideExposureTimeMsArg = {
+            "exposure_time_ms_override": overrideExposureTime
+        } if overrideExposureTime is not None else {}
 
         flashes = []
         for colorName, widget in self.durationNumbers.items():
             duration_ms = int(widget.text())
-            if flashMode == FlashMode.LIVE_PREVIEW:
-                duration_ms = min(duration_ms, livePreviewExposureTimeMs)
+            duration_ms = min(duration_ms, overrideExposureTime) if overrideExposureTime is not None else duration_ms
             if self.durationCheckboxes[colorName].isChecked() and duration_ms > 0:
                 flashes.append({
                     "led": colorName,
                     "duration_ms": duration_ms
                 })
-
-        overrideExposureTimeMsArg = {
-            "exposure_time_ms_override": int(self.overrideExposureNumber.text())
-        } if self.overrideExposureCheckbox.isChecked() else {}
 
         # TODO: Request a larger preview (0.5x rather than 0.125x?)
         if flashMode == FlashMode.FLASH_ONLY:
@@ -322,7 +329,7 @@ class ManualControlsWidget(QWidget):
                             }
                         ]
                     },
-                    "exposure_time_ms_override": livePreviewExposureTimeMs
+                    **overrideExposureTimeMsArg
                 }
             })
         else:

@@ -69,8 +69,10 @@ class ManualControlsWidget(QWidget):
 
         self.halThread = HalThread(halAddress)
 
-        # Whether we can control the filter programmatically. Assume False until we can ask the HAL.
+        # Whether we can control the filter programmatically.
         filterServoControl = False
+        # Whether we have temperature control.
+        temperatureControl = False
         maxLedFlashMs = 5000
 
         if self.halThread.hal is not None:
@@ -82,6 +84,7 @@ class ManualControlsWidget(QWidget):
                 "args": {}
             })
             filterServoControl = boost_bool(halMetadata["filter_servo_control"])
+            temperatureControl = boost_bool(halMetadata["temperature_control"])
             cameraOptions = halMetadata.get("camera_options")
             if cameraOptions:
                 maxLedFlashMs = int(cameraOptions["shutter_time_ms"])
@@ -235,7 +238,8 @@ class ManualControlsWidget(QWidget):
         mainLayout.addWidget(overrideExposureWidget)
         mainLayout.addWidget(ledStartButtonsWidget)
         mainLayout.addWidget(livePreviewWidget)
-        mainLayout.addWidget(temperatureControlsWidget)
+        if temperatureControl:
+            mainLayout.addWidget(temperatureControlsWidget)
         mainLayout.addWidget(uvCleavingControlsWidget)
         mainLayout.addWidget(self.stopButton)
 

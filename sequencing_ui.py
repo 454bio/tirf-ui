@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple
 from PySide2.QtCore import Signal, Slot, QThread, QTimer
 from PySide2.QtGui import QTextBlock, QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
 from PySide2.QtNetwork import QTcpSocket
-from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel
+from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel, QSizePolicy
 
 import ip_utils
 from manual_controls_widget import ManualControlsWidget
@@ -251,6 +251,7 @@ class SequencingUi(QMainWindow):
         leftLayout = QVBoxLayout()
         leftWidget.setLayout(leftLayout)
         leftLayout.addWidget(self.protocolViewer)
+        leftWidget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
         startStopWidget = QWidget()
         startStopLayout = QHBoxLayout()
         startStopWidget.setLayout(startStopLayout)

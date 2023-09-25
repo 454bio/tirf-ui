@@ -1,3 +1,4 @@
+import json
 import sys
 import time
 from enum import Enum
@@ -17,6 +18,15 @@ WINDOW_TITLE = "454 Image Preview"
 HAL_PORT = 45400
 MANUAL_OUTPUT_DIR = Path.home() / "454" / "output" / "manual"
 MOCK_WARNING_TEXT = f"No HAL on port {HAL_PORT}, running in mock mode"
+JSON_FILENAME_MAPPING = {
+    "{": "(",
+    "}": ")",
+    "[": "(",
+    "]": ")",
+    ":": "",
+    "\"": "",
+    "'": ""
+}
 
 class FlashMode(Enum):
     FLASH_ONLY = 0
@@ -305,6 +315,9 @@ class ManualControlsWidget(QWidget):
                 }
             })
         elif flashMode == FlashMode.CAPTURE_ONE:
+            # Format the parameters that went into this capture into a filename-compatible string
+            labelDetails = json.dumps({"flashes": flashes, "filter": filter})
+            labelDetails = "".join([JSON_FILENAME_MAPPING.get(x, x) for x in labelDetails])
             self.halThread.runCommand({
                 "command": "run_image_sequence",
                 "args": {
@@ -313,8 +326,7 @@ class ManualControlsWidget(QWidget):
                         "schema_version": 0,
                         "images": [
                             {
-                                # TODO: Put the metadata in here -- filter, flashes, exposure
-                                "label": "Preview image",
+                                "label": labelDetails,
                                 "flashes": flashes,
                                 "filter": filter
                             }

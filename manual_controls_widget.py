@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 
 from PySide2.QtCore import Slot, QThread, Qt
 from PySide2.QtGui import QDoubleValidator, QIntValidator
-from PySide2.QtWidgets import QApplication, QCheckBox, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QVBoxLayout, QWidget
+from PySide2.QtWidgets import QApplication, QCheckBox, QComboBox, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QSizePolicy, QVBoxLayout, QWidget
 
 import ip_utils
 from hal import boost_bool, Hal
@@ -150,21 +150,28 @@ class ManualControlsWidget(QWidget):
         ledControlsWidget = QWidget()
         ledControlsWidget.setLayout(ledControlsLayout)
 
-        # TODO: Type
-        filterServoPicker: Optional[QWidget] = None
-        if filterServoControl:
-            # TODO: Filter controls
-            pass
+        overrideExposureWidget: Optional[QWidget] = None
+        self.overrideExposureNumber: Optional[QLineEdit] = None
+        self.overrideExposureCheckbox: Optional[QCheckBox] = None
+        if canOverrideExposure:
+            overrideExposureLayout = QHBoxLayout()
+            for widget in make_labeled_slider_controls("Capture exposure time override", "ms", valueMax=maxLedFlashMs, defaultValue=maxLedFlashMs, checkbox=True):
+                if isinstance(widget, QLineEdit):
+                    self.overrideExposureNumber = widget
+                elif isinstance(widget, QCheckBox):
+                    self.overrideExposureCheckbox = widget
+                overrideExposureLayout.addWidget(widget)
+            overrideExposureWidget = QWidget()
+            overrideExposureWidget.setLayout(overrideExposureLayout)
 
-        overrideExposureLayout = QHBoxLayout()
-        for widget in make_labeled_slider_controls("Capture exposure time override", "ms", valueMax=maxLedFlashMs, defaultValue=maxLedFlashMs, checkbox=True):
-            if isinstance(widget, QLineEdit):
-                self.overrideExposureNumber = widget
-            elif isinstance(widget, QCheckBox):
-                self.overrideExposureCheckbox = widget
-            overrideExposureLayout.addWidget(widget)
-        overrideExposureWidget = QWidget()
-        overrideExposureWidget.setLayout(overrideExposureLayout)
+        # Filter picker.
+        filterLabel = QLabel("Filter")
+        filterLabel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.filterPicker: Optional[QComboBox] = None
+        if filterServoControl:
+            self.filterPicker = QComboBox()
+            self.filterPicker.addItems(["Any filter", "No filter", "Red", "Orange", "Green", "Blue"])
+            self.filterPicker.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         flashButton = QPushButton("Flash")
         flashButton.clicked.connect(partial(self.flash, FlashMode.FLASH_ONLY))
@@ -175,6 +182,9 @@ class ManualControlsWidget(QWidget):
         ledStartButtonsLayout = QHBoxLayout()
         ledStartButtonsLayout.addWidget(flashButton)
         ledStartButtonsLayout.addWidget(captureNowButton)
+        if self.filterPicker:
+            ledStartButtonsLayout.addWidget(filterLabel)
+            ledStartButtonsLayout.addWidget(self.filterPicker)
         ledStartButtonsWidget = QWidget()
         ledStartButtonsWidget.setLayout(ledStartButtonsLayout)
 
@@ -196,24 +206,26 @@ class ManualControlsWidget(QWidget):
         livePreviewWidget.setLayout(livePreviewLayout)
 
         # Temperature controls.
-        self.temperatureNumber = QLineEdit()
-        self.temperatureNumber.setMaximumWidth(50)
-        self.temperatureNumber.setValidator(QDoubleValidator())
-        self.temperatureNumber.setAlignment(Qt.AlignRight)
-        heaterOnButton = QPushButton("Set")
-        heaterOnButton.clicked.connect(self.setTemperature)
-        heaterOffButton = QPushButton("Disable")
-        heaterOffButton.clicked.connect(self.disableHeater)
-        self.startButtons.append(heaterOnButton)
-        self.startButtons.append(heaterOffButton)
-        temperatureControlsLayout = QHBoxLayout()
-        temperatureControlsLayout.addWidget(QLabel("Heater"))
-        temperatureControlsLayout.addWidget(self.temperatureNumber)
-        temperatureControlsLayout.addWidget(QLabel("ºC"))
-        temperatureControlsLayout.addWidget(heaterOnButton)
-        temperatureControlsLayout.addWidget(heaterOffButton)
-        temperatureControlsWidget = QWidget()
-        temperatureControlsWidget.setLayout(temperatureControlsLayout)
+        temperatureControlsWidget: Optional[QWidget] = None
+        if temperatureControl:
+            self.temperatureNumber = QLineEdit()
+            self.temperatureNumber.setMaximumWidth(50)
+            self.temperatureNumber.setValidator(QDoubleValidator())
+            self.temperatureNumber.setAlignment(Qt.AlignRight)
+            heaterOnButton = QPushButton("Set")
+            heaterOnButton.clicked.connect(self.setTemperature)
+            heaterOffButton = QPushButton("Disable")
+            heaterOffButton.clicked.connect(self.disableHeater)
+            self.startButtons.append(heaterOnButton)
+            self.startButtons.append(heaterOffButton)
+            temperatureControlsLayout = QHBoxLayout()
+            temperatureControlsLayout.addWidget(QLabel("Heater"))
+            temperatureControlsLayout.addWidget(self.temperatureNumber)
+            temperatureControlsLayout.addWidget(QLabel("ºC"))
+            temperatureControlsLayout.addWidget(heaterOnButton)
+            temperatureControlsLayout.addWidget(heaterOffButton)
+            temperatureControlsWidget = QWidget()
+            temperatureControlsWidget.setLayout(temperatureControlsLayout)
 
         # UV cleaving controls.
         uvCleavingControlsLayout = QHBoxLayout()
@@ -237,13 +249,11 @@ class ManualControlsWidget(QWidget):
         # Lay them out.
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(ledControlsWidget)
-        if filterServoPicker:
-            mainLayout.addWidget(filterServoPicker)
-        if canOverrideExposure:
+        if overrideExposureWidget:
             mainLayout.addWidget(overrideExposureWidget)
         mainLayout.addWidget(ledStartButtonsWidget)
         mainLayout.addWidget(livePreviewWidget)
-        if temperatureControl:
+        if temperatureControlsWidget:
             mainLayout.addWidget(temperatureControlsWidget)
         mainLayout.addWidget(uvCleavingControlsWidget)
         mainLayout.addWidget(self.stopButton)
@@ -263,7 +273,7 @@ class ManualControlsWidget(QWidget):
     @Slot(None)
     def flash(self, flashMode: FlashMode):
         overrideExposureTime: Optional[int] = None
-        if flashMode == FlashMode.CAPTURE_ONE and self.overrideExposureCheckbox.isChecked():
+        if flashMode == FlashMode.CAPTURE_ONE and self.overrideExposureCheckbox and self.overrideExposureNumber and self.overrideExposureCheckbox.isChecked():
             overrideExposureTime = int(self.overrideExposureNumber.text())
         elif flashMode == FlashMode.LIVE_PREVIEW and self.livePreviewNumber:
             overrideExposureTime = int(self.livePreviewNumber.text())
@@ -281,6 +291,8 @@ class ManualControlsWidget(QWidget):
                     "duration_ms": duration_ms
                 })
 
+        filter = self.filterPicker.currentText().lower().replace(" ", "_") if self.filterPicker else "any_filter"
+
         # TODO: Request a larger preview (0.5x rather than 0.125x?)
         if flashMode == FlashMode.FLASH_ONLY:
             if not flashes:
@@ -293,7 +305,6 @@ class ManualControlsWidget(QWidget):
                 }
             })
         elif flashMode == FlashMode.CAPTURE_ONE:
-            # TODO: Should save the images somewhere by default
             self.halThread.runCommand({
                 "command": "run_image_sequence",
                 "args": {
@@ -302,10 +313,10 @@ class ManualControlsWidget(QWidget):
                         "schema_version": 0,
                         "images": [
                             {
+                                # TODO: Put the metadata in here -- filter, flashes, exposure
                                 "label": "Preview image",
                                 "flashes": flashes,
-                                # TODO: Retrieve the selected filter from the UI
-                                "filter": "any_filter"
+                                "filter": filter
                             }
                         ]
                     },
@@ -324,8 +335,7 @@ class ManualControlsWidget(QWidget):
                             {
                                 "label": "Preview image",
                                 "flashes": flashes,
-                                # TODO: Retrieve the selected filter from the UI
-                                "filter": "any_filter"
+                                "filter": filter
                             }
                         ]
                     },

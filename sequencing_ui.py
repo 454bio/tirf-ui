@@ -63,10 +63,16 @@ class ProtocolThread(QThread):
         protocol = self.protocol
         # Windows doesn't support colons in filenames
         output_dir = OUTPUT_DIR_ROOT / datetime.now().isoformat().replace(":", ";")
+        output_dir.mkdir(parents=True)
         result = SequencingProtocolStatus.COMPLETED
         if protocol is not None:
             try:
                 protocol.event_run_callback = self.eventRunCallback
+                with open(output_dir / "hal_metadata.json", mode="w") as hal_metadata_file:
+                    json.dump(self.halMetadata, hal_metadata_file)
+                with open(output_dir / "protocol.454sp.json", mode="w") as protocol_file:
+                    json.dump(self.protocolJson, protocol_file)
+                # TODO: Set up logging
                 protocol.run(RunContext([RunContextNode(protocol)], output_dir, self.hal, RunState(), self))
             except Exception as e:
                 traceback.print_exc()
@@ -209,6 +215,7 @@ class SequencingUi(QMainWindow):
         statusBarText.append(f"HAL v{halMetadata['hal_version']}")
         for text in statusBarText:
             self.statusBar().addPermanentWidget(QLabel(text))
+        self.protocolThread.halMetadata = halMetadata
 
         self.stop()
         self.startButton.setEnabled(False)
@@ -346,6 +353,8 @@ class SequencingUi(QMainWindow):
         self.protocolViewer.clear()
         self.protocolViewer.loadProtocol(self.protocol)
         self.protocolThread.protocol = self.protocol
+        # Hold on to the raw protocol so we can save it in the output_dir for each run.
+        self.protocolThread.protocolJson = protocol_json
 
         self.startButton.setEnabled(True)
         self.setWindowTitle(f"{Path(path).name} - {WINDOW_TITLE_BASE}")

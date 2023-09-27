@@ -125,14 +125,14 @@ class ReactionCycle(Event):
                 callback(context)
 
             # Cleaving can create more than one image, but this will not be reflected in the sequence number.
-            # The HAL will populate %image_index% and %timestamp% appropriately.
+            # The HAL will populate $imageIndex and $timestamp appropriately.
             label = "365"  # UV wavelength
             context.hal.run_command({
                 "command": "cleave",
                 "args": {
                     "cleave_args": {
                         **self.cleaving,
-                        "filename": f"{context.state.get_next_sequence_number():06}_0A_%image_index%_{label}_C{context.state.cycle_number:04}_%timestamp%.tif"
+                        "filename": f"{context.state.get_next_sequence_number():06}_0A_$imageIndex_{label}_C{context.state.cycle_number:04}_$timestamp.tif"
                     },
                     "output_dir": str(context.output_dir())
                 }
@@ -224,7 +224,7 @@ class ImageSequence(Event):
             # The label is used as the wavelength.
             # TODO: Provide the RunContext path that got us here too -- pipeline needs to be able to ignore this
             # Maybe squeeze it in the run number identifier (below as 0A) that we're not using anymore?
-            image["filename"] = f"{context.state.get_next_sequence_number():06}_0A_{image_index:02}_{image['label']}_C{context.state.cycle_number:04}_%timestamp%.tif"
+            image["filename"] = f"{context.state.get_next_sequence_number():06}_0A_{image_index:02}_{image['label']}_C{context.state.cycle_number:04}_$timestamp.tif"
         context.hal.run_command({
             "command": "run_image_sequence",
             "args": {

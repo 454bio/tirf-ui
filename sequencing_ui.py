@@ -18,7 +18,7 @@ from hal import Hal, MockHal
 from manual_controls_widget import ManualControlsWidget
 from preview_widget import PreviewWidget
 from prompt_api import PromptApi
-from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode
+from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, RunState
 from version import VERSION
 
 WINDOW_TITLE_BASE = "454 Sequencer"
@@ -67,7 +67,7 @@ class ProtocolThread(QThread):
         if protocol is not None:
             try:
                 protocol.event_run_callback = self.eventRunCallback
-                protocol.run(RunContext([RunContextNode(protocol)], output_dir, self.hal, self))
+                protocol.run(RunContext([RunContextNode(protocol)], output_dir, self.hal, RunState(), self))
             except Exception as e:
                 traceback.print_exc()
                 exctype, value = sys.exc_info()[:2]

@@ -30,15 +30,26 @@ class RunContextNode:
         return output
 
 @dataclass
+class RunState:
+    sequence_number: int = 0
+    cycle_number: int = 0
+
+    def get_next_sequence_number(self, reserve=1) -> int:
+        sequence_number = self.sequence_number
+        self.sequence_number += reserve
+        return sequence_number
+
+@dataclass
 class RunContext:
     path: List[RunContextNode]
     root_dir: Path
     hal: IHal
+    state: RunState
     thread: Optional[QThread] = None
 
     def create_child_context(self, event: Event, step_index: Optional[int] = None, iteration: Optional[int] = None) -> RunContext:
         child_node = RunContextNode(event)
-        child_context = RunContext(self.path.copy(), self.root_dir, self.hal, self.thread)
+        child_context = RunContext(self.path.copy(), self.root_dir, self.hal, self.state, self.thread)
 
         last_node = child_context.path[-1]
         if step_index is not None:
@@ -51,10 +62,9 @@ class RunContext:
     
     def __str__(self) -> str:
         return "/".join(map(str, self.path))
-    
+
     def output_dir(self) -> Path:
-        # TODO: Define directory structure -- might not want everything in its own directory
-        return self.root_dir / str(self)
+        return self.root_dir
 
 @dataclass
 class Event:
@@ -77,7 +87,7 @@ class Event:
         print(f">>> Running {type(self).__name__} step")
         print(f"Line {self.protocol_line}, depth {self.protocol_depth}, path: {context}\nLabel: {self.label}")
         print(f"Output dir: {context.output_dir()}")
-        print(f"Time: {time.asctime(time.localtime(time.time()))}\n")
+        print(f"Time: {time.asctime(time.localtime(time.time()))}")
 
         # Notify the listener that we're running a new Event
         # The listener is only registered on the root Event
@@ -114,15 +124,21 @@ class ReactionCycle(Event):
             if callback is not None:
                 callback(context)
 
-            output_dir = context.output_dir() / "Cleaving"
-            output_dir.mkdir(parents=True)
+            # Cleaving can create more than one image, but this will not be reflected in the sequence number.
+            # The HAL will populate %image_index% and %timestamp% appropriately.
+            label = "365"  # UV wavelength
             context.hal.run_command({
                 "command": "cleave",
                 "args": {
-                    "cleave_args": self.cleaving,
-                    "output_dir": str(output_dir)
+                    "cleave_args": {
+                        **self.cleaving,
+                        "filename": f"{context.state.get_next_sequence_number():06}_0A_%image_index%_{label}_C{context.state.cycle_number:04}_%timestamp%.tif"
+                    },
+                    "output_dir": str(context.output_dir())
                 }
             }, context.thread)
+
+            context.state.cycle_number += 1
 
     def __len__(self):
         return sum(map(len, self.events)) + 1
@@ -203,16 +219,20 @@ class ImageSequence(Event):
     def run(self, context: RunContext):
         super().run(context)
 
-        output_dir = context.output_dir()
-        output_dir.mkdir(parents=True)
+        imaging_args = self.imaging_args.copy()
+        for image_index, image in enumerate(imaging_args["images"]):
+            # The label is used as the wavelength.
+            # TODO: Provide the RunContext path that got us here too -- pipeline needs to be able to ignore this
+            # Maybe squeeze it in the run number identifier (below as 0A) that we're not using anymore?
+            image["filename"] = f"{context.state.get_next_sequence_number():06}_0A_{image_index:02}_{image['label']}_C{context.state.cycle_number:04}_%timestamp%.tif"
         context.hal.run_command({
             "command": "run_image_sequence",
             "args": {
                 "sequence": {
                     "label": self.label,
-                    **self.imaging_args
+                    **imaging_args
                 },
-                "output_dir": str(output_dir)
+                "output_dir": str(context.output_dir())
             }
         }, context.thread)
 
@@ -270,8 +290,6 @@ class Wait(Event):
                     raise InterruptedError
         else:
             time.sleep(self.duration_ms / 1000)
-
-        print()
 
     def gui_details(self, context: Optional[RunContext] = None) -> Optional[str]:
         mins, msecs = divmod(self.duration_ms, 60000)
@@ -372,7 +390,7 @@ if __name__ == "__main__":
         hal = MockHal()
 
     try:
-        protocol.run(RunContext([RunContextNode(protocol)], Path(args.output_directory), hal))
+        protocol.run(RunContext([RunContextNode(protocol)], Path(args.output_directory), hal, RunState()))
     except Exception as e:
         print(e)
     finally:

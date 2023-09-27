@@ -321,7 +321,8 @@ class ManualControlsWidget(QWidget):
                             {
                                 "label": labelDetails,
                                 "flashes": flashes,
-                                "filter": filter
+                                "filter": filter,
+                                "filename": f"%timestamp%-{labelDetails}.tif"
                             }
                         ]
                     },

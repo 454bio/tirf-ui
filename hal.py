@@ -18,8 +18,36 @@ def boost_bool(value_raw: Union[str, bool]):
 class HalError(Exception):
     pass
 
+class IHal:
+    def run_command(self, command: Dict, thread=None, tries=float("inf")) -> Dict:
+        raise NotImplementedError
+    
+    def disable_heater(self, thread, tries=5):
+        raise NotImplementedError
+
+class MockHal(IHal):
+    def run_command(self, command: Dict, thread=None, tries=float("inf")) -> Dict:
+        print("Mock HAL: run_command called with command")
+        print(command)
+
+        if command["command"] == "get_metadata":
+            return {
+                "serial_number": "MOCK",
+                "hal_version": "MOCK",
+                "filter_servo_control": True,
+                "temperature_control": True,
+                "can_override_exposure": True
+            }
+        else:
+            # Delay so we can actually see what's going on in a mock run
+            time.sleep(1)
+            return {}
+
+    def disable_heater(self, thread, tries=5):
+        print("Mock HAL: disable_heater called")
+
 @dataclass
-class Hal:
+class Hal(IHal):
     """Simple wrapper to send commands to the HAL."""
     address: str
     port: int

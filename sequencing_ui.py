@@ -14,10 +14,11 @@ from PySide2.QtNetwork import QTcpSocket
 from PySide2.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QAction, QFileDialog, QErrorMessage, QLabel, QSizePolicy
 
 import ip_utils
+from hal import Hal, MockHal
 from manual_controls_widget import ManualControlsWidget
 from preview_widget import PreviewWidget
 from prompt_api import PromptApi
-from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode, Hal
+from sequencing_protocol import load_protocol_json, validate_protocol_json, Event, RunContext, RunContextNode
 from version import VERSION
 
 WINDOW_TITLE_BASE = "454 Sequencer"
@@ -49,12 +50,13 @@ class ProtocolThread(QThread):
     def __init__(self, halAddress):
         super().__init__()
         self.protocol: Optional[Event] = None
-        self.hal: Optional[Hal] = None
 
         # Create the HAL iff there's a socket we can connect to.
         # Otherwise, run in mock mode.
         if ip_utils.exists(halAddress, HAL_PORT):
             self.hal = Hal(halAddress, HAL_PORT)
+        else:
+            self.hal = MockHal()
 
     @Slot(None)
     def run(self):
@@ -179,9 +181,14 @@ class SequencingUi(QMainWindow):
     def __init__(self, halAddress):
         super().__init__()
 
-        self.populateWidgets(halAddress)
-
         self.protocolThread = ProtocolThread(halAddress)
+        halMetadata = self.protocolThread.hal.run_command({
+            "command": "get_metadata",
+            "args": {}
+        })
+
+        self.populateWidgets(halAddress, halMetadata)
+
         self.protocolThread.progress.connect(self.protocolViewer.progress)
         self.protocolThread.finished.connect(self.finished)
         self.protocolThread.error.connect(self.error)
@@ -193,27 +200,20 @@ class SequencingUi(QMainWindow):
         self.updateStatusWidget("status", SequencingProtocolStatus.NEED_PROTOCOL.value)
 
         # Continuous connection to HAL for dynamic status bar widgets
-        if self.protocolThread.hal is not None:
+        if not isinstance(self.protocolThread.hal, MockHal):
             self.connectToStatusServer(halAddress)
 
         # Holder for static status bar widgets (placed on the right)
         statusBarText = [f"GUI v{VERSION}"]
-        if self.protocolThread.hal is not None:
-            halMetadata = self.protocolThread.hal.run_command({
-                "command": "get_metadata",
-                "args": {}
-            })
-            statusBarText.append(f"Unit {halMetadata['serial_number'][-8:]}")
-            statusBarText.append(f"HAL v{halMetadata['hal_version']}")
-        else:
-            statusBarText.append("Mock mode (no HAL)")
+        statusBarText.append(f"Unit {halMetadata['serial_number'][-8:]}")
+        statusBarText.append(f"HAL v{halMetadata['hal_version']}")
         for text in statusBarText:
             self.statusBar().addPermanentWidget(QLabel(text))
 
         self.stop()
         self.startButton.setEnabled(False)
     
-    def populateWidgets(self, halAddress):
+    def populateWidgets(self, halAddress, halMetadata):
         self.previewWidget = PreviewWidget()
         if ip_utils.exists(halAddress, PREVIEW_PORT):
             self.previewWidget.connectToHal(halAddress, PREVIEW_PORT)
@@ -225,7 +225,7 @@ class SequencingUi(QMainWindow):
         toggleManualButton = QPushButton("Manual controls")
         # TODO: Make this hook into the the ProtocolThread's HAL instead (or vice versa)
         # TODO: This avoids unnecessary threads and allows a protocol event to disable the manual buttons
-        self.manualControls = ManualControlsWidget(halAddress)
+        self.manualControls = ManualControlsWidget(halAddress, halMetadata)
         self.openAction = QAction("&Open")
         # self.settingsAction = QAction("S&ettings")
 
@@ -310,11 +310,10 @@ class SequencingUi(QMainWindow):
     def finished(self, result: SequencingProtocolStatus):
         self.protocolViewer.reformatTimer.stop()
 
-        if self.protocolThread.hal is not None:
-            try:
-                self.protocolThread.hal.disable_heater(self.protocolThread)
-            except Exception as e:
-                self.error((type(e), e, ""))
+        try:
+            self.protocolThread.hal.disable_heater(self.protocolThread)
+        except Exception as e:
+            self.error((type(e), e, ""))
 
         self.updateStatusWidget("status", result.value)
         self.stopButton.setEnabled(False)

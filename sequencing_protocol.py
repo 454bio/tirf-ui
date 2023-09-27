@@ -10,7 +10,7 @@ import time
 import jsonschema
 from PySide2.QtCore import QThread
 
-from hal import Hal
+from hal import IHal, Hal, MockHal
 
 @dataclass
 class RunContextNode:
@@ -33,7 +33,7 @@ class RunContextNode:
 class RunContext:
     path: List[RunContextNode]
     root_dir: Path
-    hal: Optional[Hal]
+    hal: IHal
     thread: Optional[QThread] = None
 
     def create_child_context(self, event: Event, step_index: Optional[int] = None, iteration: Optional[int] = None) -> RunContext:
@@ -113,12 +113,6 @@ class ReactionCycle(Event):
             callback = context.path[0].event.event_run_callback
             if callback is not None:
                 callback(context)
-
-            if not context.hal:
-                print("Cleaving skipped -- `mock = True`\n")
-                # Delay so we can actually see what's going on in a mock run
-                time.sleep(1)
-                continue
 
             output_dir = context.output_dir() / "Cleaving"
             output_dir.mkdir(parents=True)
@@ -209,12 +203,6 @@ class ImageSequence(Event):
     def run(self, context: RunContext):
         super().run(context)
 
-        if not context.hal:
-            print("Imaging skipped -- `mock = True`\n")
-            # Delay so we can actually see what's going on in a mock run
-            time.sleep(1)
-            return
-
         output_dir = context.output_dir()
         output_dir.mkdir(parents=True)
         context.hal.run_command({
@@ -245,12 +233,6 @@ class SetTemperature(Event):
 
     def run(self, context: RunContext):
         super().run(context)
-
-        if not context.hal:
-            print("Temperature skipped -- `mock = True`")
-            # Delay so we can actually see what's going on in a mock run
-            time.sleep(1)
-            return
 
         context.hal.run_command({
             "command": "wait_for_temperature",
@@ -385,14 +367,13 @@ if __name__ == "__main__":
 
     # Connect to the HAL
     if not args.mock:
-        hal = Hal(args.hal)
+        hal = Hal(args.hal, 45400)
     else:
-        hal = None
+        hal = MockHal()
 
     try:
         protocol.run(RunContext([RunContextNode(protocol)], Path(args.output_directory), hal))
     except Exception as e:
         print(e)
     finally:
-        if hal is not None:
-            hal.disable_heater(None)
+        hal.disable_heater(None)

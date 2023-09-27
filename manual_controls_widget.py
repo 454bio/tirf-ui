@@ -8,10 +8,10 @@ from typing import Dict, List, Optional
 
 from PySide2.QtCore import Slot, QThread, Qt
 from PySide2.QtGui import QDoubleValidator, QIntValidator
-from PySide2.QtWidgets import QApplication, QCheckBox, QComboBox, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QSizePolicy, QVBoxLayout, QWidget
+from PySide2.QtWidgets import QCheckBox, QComboBox, QErrorMessage, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QSizePolicy, QVBoxLayout, QWidget
 
 import ip_utils
-from hal import boost_bool, Hal
+from hal import boost_bool, Hal, MockHal
 from sequencing_protocol import MAX_TEMPERATURE_HOLD_S, MAX_TEMPERATURE_WAIT_S
 
 WINDOW_TITLE = "454 Image Preview"
@@ -37,12 +37,13 @@ class HalThread(QThread):
     def __init__(self, halAddress):
         super().__init__()
         self.command: Optional[Dict] = None
-        self.hal: Optional[Hal] = None
 
         # Create the HAL iff there's a socket we can connect to.
         # Otherwise, run in mock mode.
-        if HAL_PORT is not None and ip_utils.exists(halAddress, HAL_PORT):
+        if ip_utils.exists(halAddress, HAL_PORT):
             self.hal = Hal(halAddress, HAL_PORT)
+        else:
+            self.hal = MockHal()
 
     def runCommand(self, command: Dict):
         self.command = command
@@ -74,7 +75,7 @@ class HalThread(QThread):
             QErrorMessage.qtHandler().showMessage(errorString)
 
 class ManualControlsWidget(QWidget):
-    def __init__(self, halAddress):
+    def __init__(self, halAddress, halMetadata):
         super().__init__()
 
         self.halThread = HalThread(halAddress)
@@ -87,20 +88,12 @@ class ManualControlsWidget(QWidget):
         canOverrideExposure = False
         maxLedFlashMs = 5000
 
-        if self.halThread.hal is not None:
-            # We need this data to open the window, so it's okay that it's blocking.
-            # If we can't talk to the HAL, nothing else will work, so it's okay that failure here is fatal.
-            # TODO: Get these from the caller if possible rather than calling the HAL ourselves
-            halMetadata = self.halThread.hal.run_command({
-                "command": "get_metadata",
-                "args": {}
-            })
-            filterServoControl = boost_bool(halMetadata["filter_servo_control"])
-            temperatureControl = boost_bool(halMetadata["temperature_control"])
-            canOverrideExposure = boost_bool(halMetadata["can_override_exposure"])
-            cameraOptions = halMetadata.get("camera_options")
-            if cameraOptions:
-                maxLedFlashMs = int(cameraOptions["shutter_time_ms"])
+        filterServoControl = boost_bool(halMetadata["filter_servo_control"])
+        temperatureControl = boost_bool(halMetadata["temperature_control"])
+        canOverrideExposure = boost_bool(halMetadata["can_override_exposure"])
+        cameraOptions = halMetadata.get("camera_options")
+        if cameraOptions:
+            maxLedFlashMs = int(cameraOptions["shutter_time_ms"])
 
         # Make sure we have somewhere to save manually-captured images
         MANUAL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -406,16 +399,3 @@ class ManualControlsWidget(QWidget):
             "command": "disable_heater",
             "args": {}
         })
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    halAddress = ip_utils.CONNECT_ADDRESS if len(sys.argv) == 1 else sys.argv[1]
-    ui = ManualControlsWidget(halAddress)
-    ui.show()
-
-    if ui.halThread.hal is None:
-        # We're in mock mode. Make it obvious.
-        print(MOCK_WARNING_TEXT)
-        QErrorMessage.qtHandler().showMessage(MOCK_WARNING_TEXT)
-
-    sys.exit(app.exec_())

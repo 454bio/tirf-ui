@@ -22,11 +22,11 @@ class RunContextNode:
         self.start_time = time.time()
 
     def __str__(self) -> str:
-        output = f"{type(self.event).__name__}"
+        output = self.event.short_type
         if self.iteration is not None:
-            output += f"-iteration_{self.iteration}"
+            output += f"i{self.iteration}"
         if self.step_index is not None:
-            output += f"-step_{self.step_index}"
+            output += f"s{self.step_index}"
         return output
 
 @dataclass
@@ -61,7 +61,7 @@ class RunContext:
         return child_context
     
     def __str__(self) -> str:
-        return "/".join(map(str, self.path))
+        return "-".join(map(str, self.path))
 
     def output_dir(self) -> Path:
         return self.root_dir
@@ -69,6 +69,7 @@ class RunContext:
 @dataclass
 class Event:
     readable_type: ClassVar[str] = "Abstract Event"
+    short_type: ClassVar[str] = "E"
     label: str
     protocol_line: int
     protocol_depth: int
@@ -86,7 +87,7 @@ class Event:
         # TODO: Use a logging library
         print(f">>> Running {type(self).__name__} step")
         print(f"Line {self.protocol_line}, depth {self.protocol_depth}, path: {context}\nLabel: {self.label}")
-        print(f"Output dir: {context.output_dir()}")
+        print(f"Protocol path: {context}")
         print(f"Time: {time.asctime(time.localtime(time.time()))}")
 
         # Notify the listener that we're running a new Event
@@ -107,6 +108,7 @@ class Event:
 @dataclass
 class ReactionCycle(Event):
     readable_type: ClassVar[str] = "Reaction Cycle"
+    short_type: ClassVar[str] = "R"
     events: List[Event]
     cleaving: Dict
     iterations: int = 1
@@ -132,7 +134,7 @@ class ReactionCycle(Event):
                 "args": {
                     "cleave_args": {
                         **self.cleaving,
-                        "filename": f"{context.state.get_next_sequence_number():06}_0A_$imageIndex_{label}_C{context.state.cycle_number:04}_$timestamp.tif"
+                        "filename": f"{context.state.get_next_sequence_number():06}_$imageIndex_{label}_C{context.state.cycle_number:04}_$timestamp_P-{context}-C.tif"
                     },
                     "output_dir": str(context.output_dir())
                 }
@@ -175,6 +177,7 @@ class ReactionCycle(Event):
 @dataclass
 class Group(Event):
     readable_type: ClassVar[str] = "Group"
+    short_type: ClassVar[str] = "G"
     events: List[Event]
     iterations: int = 1
 
@@ -214,6 +217,7 @@ class Group(Event):
 @dataclass
 class ImageSequence(Event):
     readable_type: ClassVar[str] = "Image Sequence"
+    short_type: ClassVar[str] = "I"
     imaging_args: Dict
 
     def run(self, context: RunContext):
@@ -222,9 +226,7 @@ class ImageSequence(Event):
         imaging_args = self.imaging_args.copy()
         for image_index, image in enumerate(imaging_args["images"]):
             # The label is used as the wavelength.
-            # TODO: Provide the RunContext path that got us here too -- pipeline needs to be able to ignore this
-            # Maybe squeeze it in the run number identifier (below as 0A) that we're not using anymore?
-            image["filename"] = f"{context.state.get_next_sequence_number():06}_0A_{image_index:02}_{image['label']}_C{context.state.cycle_number:04}_$timestamp.tif"
+            image["filename"] = f"{context.state.get_next_sequence_number():06}_{image_index:02}_{image['label']}_C{context.state.cycle_number:04}_$timestamp_P-{context}.tif"
         context.hal.run_command({
             "command": "run_image_sequence",
             "args": {
@@ -249,6 +251,7 @@ MAX_TEMPERATURE_HOLD_S = 8 * 60 * 60  # 8 hours
 @dataclass
 class SetTemperature(Event):
     readable_type: ClassVar[str] = "Set Temperature"
+    short_type: ClassVar[str] = "T"
     set_temperature_args: Dict
 
     def run(self, context: RunContext):
@@ -271,6 +274,7 @@ class SetTemperature(Event):
 @dataclass
 class Wait(Event):
     readable_type: ClassVar[str] = "Wait"
+    short_type: ClassVar[str] = "W"
     duration_ms: int
 
     def run(self, context: RunContext):

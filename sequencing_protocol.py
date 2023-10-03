@@ -224,9 +224,9 @@ class ImageSequence(Event):
         super().run(context)
 
         imaging_args = self.imaging_args.copy()
-        for image_index, image in enumerate(imaging_args["images"]):
+        for image in imaging_args["images"]:
             # The label is used as the wavelength.
-            image["filename"] = f"{context.state.get_next_sequence_number():06}_{image_index:02}_{image['label']}_C{context.state.cycle_number:04}_$timestamp_P-{context}.tif"
+            image["filename"] = f"{context.state.get_next_sequence_number():06}_$imageIndex_$imageLabel_C{context.state.cycle_number:04}_$timestamp_P-{context}.tif"
         context.hal.run_command({
             "command": "run_image_sequence",
             "args": {

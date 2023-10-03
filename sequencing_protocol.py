@@ -244,7 +244,7 @@ class ImageSequence(Event):
         return f"{len(images)} images"
 
 # TODO: Calculate a sane value for this using the temperature difference
-MAX_TEMPERATURE_WAIT_S = 10 * 60  # 10 minutes
+MAX_TEMPERATURE_WAIT_S = 20 * 60  # 20 minutes
 # TODO: Calculate a sane value for this using the estimated time remaining in the protocol
 MAX_TEMPERATURE_HOLD_S = 8 * 60 * 60  # 8 hours
 

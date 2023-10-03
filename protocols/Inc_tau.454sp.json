@@ -1,0 +1,83 @@
+{
+    "label": "Inc Tau",
+    "event_type": "Group",
+    "Group_args": {
+        "iterations": 1,
+        "events": [
+            {
+                "label": "Experiment Temperature",
+                "event_type": "SetTemperature",
+                "SetTemperature_args": {
+                    "temperature_kelvin": 331.15
+                }
+            },
+            {
+                "label": "Dummy image for initial prompt",
+                "event_type": "ImageSequence",
+                "ImageSequence_args": {
+                    "schema_version": 0,
+                    "images": [
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 150
+                                }
+                            ],
+                            "filter": "green"
+                        }
+                    ]
+                }
+            },
+            {
+                "label": "Reaction Cycle",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1500
+                    }
+                }
+            },
+            {
+                "label": "Imaging loop",
+                "event_type": "Group",
+                "Group_args": {
+                    "iterations": 60,
+                    "events": [
+                        {
+                            "label": "Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 150
+                                            }
+                                        ],
+                                        "filter": "any_filter"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "label": "Wait",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 10000
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

@@ -291,10 +291,12 @@ class SequencingUi(QMainWindow):
     @Slot(QTcpSocket)
     def handleStatusMessage(self, s: QTcpSocket):
         # TODO: Something in this chain is leaking 24K every time this is called
-        status_message_str = bytes(s.readAll()).decode(ENCODING)
-        status = json.loads(status_message_str)
-
-        self.updateStatusWidget(**status)
+        status_message_strings = bytes(s.readAll()).decode(ENCODING)
+        # Sometimes, we get more than one object in a message.
+        # Work around this by splitting it up (requires that the HAL sends delimited objects).
+        for status_message in status_message_strings.splitlines():
+            status = json.loads(status_message)
+            self.updateStatusWidget(**status)
 
     def updateStatusWidget(self, name: str, text: str):
         widget = self.statusWidgets.get(name)

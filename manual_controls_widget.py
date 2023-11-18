@@ -90,6 +90,7 @@ class ManualControlsWidget(QWidget):
 
         filterServoControl = boost_bool(halMetadata["filter_servo_control"])
         temperatureControl = boost_bool(halMetadata["temperature_control"])
+        focusControl = boost_bool(halMetadata["focus_control"])
         canOverrideExposure = boost_bool(halMetadata["can_override_exposure"])
         cameraOptions = halMetadata.get("camera_options")
         if cameraOptions:
@@ -208,6 +209,27 @@ class ManualControlsWidget(QWidget):
         livePreviewWidget = QWidget()
         livePreviewWidget.setLayout(livePreviewLayout)
 
+        # Focus controls.
+        focusControlsWidget: Optional[QWidget] = None
+        if focusControl:
+            def make_focus_nudge_button(steps: int) -> QPushButton:
+                text = ("+" if steps > 0 else "") + str(steps)
+                button = QPushButton(text)
+                button.clicked.connect(partial(self.nudgeBaseFocus, steps))
+                self.startButtons.append(button)
+                return button
+
+            focusControlsLayout = QHBoxLayout()
+            focusControlsLayout.addWidget(QLabel("Focus"))
+            focusControlsLayout.addWidget(make_focus_nudge_button(-100))
+            focusControlsLayout.addWidget(make_focus_nudge_button(-10))
+            focusControlsLayout.addWidget(make_focus_nudge_button(-1))
+            focusControlsLayout.addWidget(make_focus_nudge_button(1))
+            focusControlsLayout.addWidget(make_focus_nudge_button(10))
+            focusControlsLayout.addWidget(make_focus_nudge_button(100))
+            focusControlsWidget = QWidget()
+            focusControlsWidget.setLayout(focusControlsLayout)
+
         # Temperature controls.
         temperatureControlsWidget: Optional[QWidget] = None
         if temperatureControl:
@@ -256,6 +278,8 @@ class ManualControlsWidget(QWidget):
             mainLayout.addWidget(overrideExposureWidget)
         mainLayout.addWidget(ledStartButtonsWidget)
         mainLayout.addWidget(livePreviewWidget)
+        if focusControlsWidget:
+            mainLayout.addWidget(focusControlsWidget)
         if temperatureControlsWidget:
             mainLayout.addWidget(temperatureControlsWidget)
         mainLayout.addWidget(uvCleavingControlsWidget)
@@ -390,6 +414,17 @@ class ManualControlsWidget(QWidget):
                     "target_temperature_kelvin": temperatureKelvin,
                     "wait_time_s": MAX_TEMPERATURE_WAIT_S,
                     "hold_time_s": MAX_TEMPERATURE_HOLD_S
+                }
+            }
+        })
+
+    @Slot(None)
+    def nudgeBaseFocus(self, steps: int):
+        self.halThread.runCommand({
+            "command": "nudge_base_focus",
+            "args": {
+                "nudge_base_focus_args": {
+                    "steps": steps
                 }
             }
         })

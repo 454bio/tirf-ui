@@ -36,7 +36,8 @@ class MockHal(IHal):
                 "hal_version": "MOCK",
                 "filter_servo_control": True,
                 "temperature_control": True,
-                "can_override_exposure": True
+                "can_override_exposure": True,
+                "focus_control": True
             }
         else:
             # Delay so we can actually see what's going on in a mock run

@@ -398,4 +398,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
     finally:
-        hal.disable_heater(None)
+        # hal.disable_heater(None)
+        pass

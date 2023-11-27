@@ -191,6 +191,12 @@
                             "title": "Cleaving duration (ms)",
                             "type": "integer",
                             "minimum": 0
+                        },
+                        "cleaving_intensity_per_mille": {
+                            "title": "Cleaving PWM intensity (parts per thousand)",
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1000
                         }
                     },
                     "required": [

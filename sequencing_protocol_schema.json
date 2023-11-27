@@ -303,6 +303,12 @@
                     "title": "Duration (ms)",
                     "type": "integer",
                     "minimum": 0
+                },
+                "intensity_per_mille": {
+                    "title": "PWM intensity (parts per thousand)",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000
                 }
             },
             "required": [

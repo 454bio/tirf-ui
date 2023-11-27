@@ -58,7 +58,7 @@
                                     }
                                 ]
                             }
-                        }                        
+                        }
                     ],
                     "cleaving": {
                         "schema_version": 0,
@@ -81,14 +81,7 @@
                     "iterations": 16,
                     "events": [
                         {
-                            "label": "Incorporation",
-                            "event_type": "Wait",
-                            "Wait_args": {
-                                "duration_ms": 10000
-                            }
-                        },
-                        {
-                            "label": "Reaction Image",
+                            "label": "Pre-Incorporation Image",
                             "event_type": "ImageSequence",
                             "ImageSequence_args": {
                                 "schema_version": 0,
@@ -135,7 +128,63 @@
                                     }
                                 ]
                             }
-                        }                        
+                        },
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 10000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
                     ],
                     "cleaving": {
                         "schema_version": 0,

@@ -1,5 +1,4 @@
 import json
-import sys
 import time
 from enum import Enum
 from functools import partial
@@ -142,15 +141,34 @@ class ManualControlsWidget(QWidget):
         ledControlsLayout = QGridLayout()
         self.durationNumbers: Dict[str, QLineEdit] = {}
         self.durationCheckboxes: Dict[str, QCheckBox] = {}
+        self.pwmNumbers: Dict[str, QLineEdit] = {}
         for colorIndex, colorName in enumerate(["red", "orange", "green", "blue"]):
-            for widgetIndex, widget in enumerate(make_labeled_slider_controls(colorName.capitalize(), "ms", maxLedFlashMs)):
+            widgetIndex = 0
+            checkbox: Optional[QCheckBox] = None
+            for widget in make_labeled_slider_controls(colorName.capitalize(), "ms", maxLedFlashMs):
                 if isinstance(widget, QLineEdit):
                     # Hold on to the text inputs so we can retrieve their values on `flash()`.
                     # TODO: Will need a different way of doing this if there is ever another QLineEdit here
                     self.durationNumbers[colorName] = widget
+                    ledControlsLayout.addWidget(widget, colorIndex, widgetIndex)
+                    widgetIndex += 1
                 elif isinstance(widget, QCheckBox):
                     self.durationCheckboxes[colorName] = widget
+                    # HACK: Put this one at the end
+                    checkbox = widget
+                else:
+                    ledControlsLayout.addWidget(widget, colorIndex, widgetIndex)
+                    widgetIndex += 1
+            # TODO: These should be toggled by the checkbox
+            for widget in make_labeled_slider_controls("", "‰", valueMax=1000, defaultValue=1000, checkbox=False):
+                if isinstance(widget, QLineEdit):
+                    # Hold on to the text inputs so we can retrieve their values on `flash()`.
+                    # TODO: Will need a different way of doing this if there is ever another QLineEdit here
+                    self.pwmNumbers[colorName] = widget
                 ledControlsLayout.addWidget(widget, colorIndex, widgetIndex)
+                widgetIndex += 1
+            # HACK: Now add the checkbox so it's all the way at the right
+            ledControlsLayout.addWidget(checkbox, colorIndex, widgetIndex)
         ledControlsWidget = QWidget()
         ledControlsWidget.setLayout(ledControlsLayout)
 
@@ -312,10 +330,12 @@ class ManualControlsWidget(QWidget):
         for colorName, widget in self.durationNumbers.items():
             duration_ms = int(widget.text())
             duration_ms = min(duration_ms, overrideExposureTime) if overrideExposureTime is not None else duration_ms
+            pwm = int(self.pwmNumbers[colorName].text())
             if self.durationCheckboxes[colorName].isChecked() and duration_ms > 0:
                 flashes.append({
                     "led": colorName,
-                    "duration_ms": duration_ms
+                    "duration_ms": duration_ms,
+                    "intensity_per_mille": pwm
                 })
 
         filter = self.filterPicker.currentText().lower().replace(" ", "_") if self.filterPicker else "any_filter"

@@ -190,18 +190,16 @@ class PreviewWidget(QWidget):
         whiteLevel = self.levelLogScale(self.whiteLevelSlider.value())
         self.whiteLevelLabel.setText(str(whiteLevel))
         colorScale = (self.DEFAULT_MAX_LEVEL - self.DEFAULT_MIN_LEVEL) / (whiteLevel - blackLevel)
-        def recolor(val: int) -> int:
-            # Clamp within the set levels...
-            val = max(val, blackLevel)
-            val = min(val, whiteLevel)
-            # ... scale it...
-            val = int((val - blackLevel) * colorScale)
-            # ... clamp within the representation limits...
-            val = max(val, self.DEFAULT_MIN_LEVEL)
-            val = min(val, self.DEFAULT_MAX_LEVEL-1)
-            # ... and finally convert to the 8-bit output format.
-            return val >> 8
-        self.levelsLut = np.fromiter(map(recolor, range(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL+1)), dtype=np.uint8)
+
+        # Create the base lookup table...
+        levelsLut16 = np.arange(self.DEFAULT_MIN_LEVEL, self.DEFAULT_MAX_LEVEL+1, dtype=np.uint16)
+        # ... clamp within the set levels...
+        levelsLut16[levelsLut16 < blackLevel] = blackLevel
+        levelsLut16[levelsLut16 > whiteLevel] = whiteLevel
+        # ... scale it...
+        levelsLut16 = (levelsLut16 - blackLevel) * colorScale
+        # ... and finally convert to the 8-bit output format.
+        self.levelsLut = (levelsLut16 / (1 << 8)).astype(np.uint8)
 
         self.drawImage()
 
@@ -217,7 +215,7 @@ class PreviewWidget(QWidget):
 
         currentZoomLevel = int(self.zoomLevelLabel.text().strip("%"))
         zoomedSize: Tuple[int, int] = tuple(int(currentZoomLevel / 100 * x) for x in image.size)
-        image = image.resize(zoomedSize)
+        image = image.resize(zoomedSize, Image.NEAREST)
 
         # The image will have to be converted to 8-bit for Qt as well.
         # No need to do it again though.

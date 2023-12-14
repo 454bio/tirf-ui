@@ -197,6 +197,9 @@
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 1000
+                        },
+                        "filter": {
+                            "$ref": "#/definitions/LensFilter_def"
                         }
                     },
                     "required": [

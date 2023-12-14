@@ -1,0 +1,29 @@
+{
+    "label": "Images",
+    "event_type": "ImageSequence",
+    "ImageSequence_args": {
+        "schema_version": 0,
+        "images": [
+                    {
+                "label": "445",
+                "flashes": [
+                    {
+                        "led": "blue",
+                        "duration_ms": 200
+                    }
+                ],
+                "filter": "no_filter"
+            },
+            {
+                "label": "365",
+                "flashes": [
+                    {
+                        "led": "uv",
+                        "duration_ms": 200
+                    }
+                ],
+                "filter": "no_filter"
+            }
+        ]
+    }
+}

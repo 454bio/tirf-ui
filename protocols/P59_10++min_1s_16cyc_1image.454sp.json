@@ -1,0 +1,1124 @@
+{
+    "label": "Whole Experiment",
+    "event_type": "Group",
+    "Group_args": {
+        "iterations": 1,
+        "events": [
+            {
+                "label": "Initial Cycle",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Initial Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Experiment Temperature",
+                "event_type": "SetTemperature",
+                "SetTemperature_args": {
+                    "temperature_kelvin": 331.15
+                }
+            },
+            {
+                "label": "Cycle 2",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 660000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 3",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 720000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 4",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 780000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 5",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 840000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 6",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 900000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 7",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 960000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 8",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 1020000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 9",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 1080000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 10",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 1140000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 11",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 1200000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 12",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 1260000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 13",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 1320000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 14",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 1380000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 15",
+                "event_type": "ReactionCycle",
+                "ReactionCycle_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 1440000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "cleaving": {
+                        "schema_version": 0,
+                        "capture_period_ms": 0,
+                        "cleaving_duration_ms": 1000
+                    }
+                }
+            },
+            {
+                "label": "Cycle 16",
+                "event_type": "Group",
+                "Group_args": {
+                    "iterations": 1,
+                    "events": [
+                        {
+                            "label": "Incorporation",
+                            "event_type": "Wait",
+                            "Wait_args": {
+                                "duration_ms": 1500000
+                            }
+                        },
+                        {
+                            "label": "Post-Incorporation Image",
+                            "event_type": "ImageSequence",
+                            "ImageSequence_args": {
+                                "schema_version": 0,
+                                "images": [
+                                    {
+                                        "label": "645",
+                                        "flashes": [
+                                            {
+                                                "led": "red",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "red"
+                                    },
+                                    {
+                                        "label": "590",
+                                        "flashes": [
+                                            {
+                                                "led": "orange",
+                                                "duration_ms": 3000
+                                            }
+                                        ],
+                                        "filter": "orange"
+                                    },
+                                    {
+                                        "label": "525",
+                                        "flashes": [
+                                            {
+                                                "led": "green",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "green"
+                                    },
+                                    {
+                                        "label": "445",
+                                        "flashes": [
+                                            {
+                                                "led": "blue",
+                                                "duration_ms": 4000
+                                            }
+                                        ],
+                                        "filter": "blue"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

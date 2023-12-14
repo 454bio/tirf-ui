@@ -1,0 +1,546 @@
+{
+    "label": "Imaging Stress Test",
+    "event_type": "Group",
+    "Group_args": {
+        "iterations": 5,
+        "events": [
+            {
+                "label": "Images",
+                "event_type": "ImageSequence",
+                "ImageSequence_args": {
+                    "schema_version": 0,
+                    "images": [
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "645",
+                            "flashes": [
+                                {
+                                    "led": "red",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "590",
+                            "flashes": [
+                                {
+                                    "led": "orange",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "525",
+                            "flashes": [
+                                {
+                                    "led": "green",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        },
+                        {
+                            "label": "445",
+                            "flashes": [
+                                {
+                                    "led": "blue",
+                                    "duration_ms": 20,
+                                    "intensity_per_mille": 50
+                                }
+                            ],
+                            "filter": "no_filter"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

@@ -34,7 +34,7 @@ class MockHal(IHal):
             return {
                 "serial_number": "MOCK",
                 "hal_version": "MOCK",
-                "filter_servo_control": True,
+                "filter_control": True,
                 "temperature_control": True,
                 "can_override_exposure": True,
                 "focus_control": True

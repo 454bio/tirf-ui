@@ -80,14 +80,14 @@ class ManualControlsWidget(QWidget):
         self.halThread = HalThread(halAddress)
 
         # Whether we can control the filter programmatically.
-        filterServoControl = False
+        filterControl = False
         # Whether we have temperature control.
         temperatureControl = False
         # Whether we can override the exposure.
         canOverrideExposure = False
         maxLedFlashMs = 5000
 
-        filterServoControl = boost_bool(halMetadata["filter_servo_control"])
+        filterControl = boost_bool(halMetadata["filter_control"])
         temperatureControl = boost_bool(halMetadata["temperature_control"])
         focusControl = boost_bool(halMetadata["focus_control"])
         canOverrideExposure = boost_bool(halMetadata["can_override_exposure"])
@@ -190,7 +190,7 @@ class ManualControlsWidget(QWidget):
         filterLabel = QLabel("Filter")
         filterLabel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.filterPicker: Optional[QComboBox] = None
-        if filterServoControl:
+        if filterControl:
             self.filterPicker = QComboBox()
             self.filterPicker.addItems(["Any filter", "No filter", "Red", "Orange", "Green", "Blue"])
             self.filterPicker.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)

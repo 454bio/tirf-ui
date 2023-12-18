@@ -157,10 +157,12 @@ class PreviewWidget(QWidget):
             return
         
         # Apply recoloring.
-        # PIL only allows us to use a 16-bit LUT by first converting to a 32-bit image (?!)
+        # PIL only allows us to use a 16-bit LUT on 32-bit images.
+        # It is sufficient to trick PIL into thinking this is 32-bit without actually doing the conversion, which can take up to 500ms.
         # `_point(ImagingObject *self, PyObject *args)` in PIL's _imaging.c describes LUT behavior.
         # This behavior is not documented, and should probably be patched upstream to something more reasonable.
-        image = self.sourceImage.convert("I").point(self.levelsLut, "L")
+        self.sourceImage.mode = "I"
+        image = self.sourceImage.point(self.levelsLut, "L")
 
         # The image will have to be converted to 8-bit for Qt as well.
         # No need to do it again though.

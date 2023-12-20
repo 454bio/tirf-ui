@@ -15,6 +15,7 @@ from sequencing_protocol import MAX_TEMPERATURE_HOLD_S, MAX_TEMPERATURE_WAIT_S
 
 WINDOW_TITLE = "454 Image Preview"
 HAL_PORT = 45400
+HAL_ADJUSTMENTS_PORT = 45404
 MANUAL_OUTPUT_DIR = Path.home() / "454" / "output" / "manual"
 MOCK_WARNING_TEXT = f"No HAL on port {HAL_PORT}, running in mock mode"
 JSON_FILENAME_MAPPING = {
@@ -230,11 +231,13 @@ class ManualControlsWidget(QWidget):
         # Focus controls.
         focusControlsWidget: Optional[QWidget] = None
         if focusControl:
+            self.halAdjustments = Hal(halAddress, HAL_ADJUSTMENTS_PORT)
             def make_focus_nudge_button(steps: int) -> QPushButton:
                 text = ("+" if steps > 0 else "") + str(steps)
                 button = QPushButton(text)
                 button.clicked.connect(partial(self.nudgeBaseFocus, steps))
-                self.startButtons.append(button)
+                # These go to a different API endpoint, so they don't need to be disabled when a command is running.
+                # self.startButtons.append(button)
                 return button
 
             focusControlsLayout = QHBoxLayout()
@@ -440,7 +443,7 @@ class ManualControlsWidget(QWidget):
 
     @Slot(None)
     def nudgeBaseFocus(self, steps: int):
-        self.halThread.runCommand({
+        self.halAdjustments.run_command({
             "command": "nudge_base_focus",
             "args": {
                 "nudge_base_focus_args": {

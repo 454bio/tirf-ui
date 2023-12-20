@@ -242,12 +242,12 @@ class ManualControlsWidget(QWidget):
 
             focusControlsLayout = QHBoxLayout()
             focusControlsLayout.addWidget(QLabel("Focus"))
+            focusControlsLayout.addWidget(make_focus_nudge_button(-1000))
+            focusControlsLayout.addWidget(make_focus_nudge_button(-500))
             focusControlsLayout.addWidget(make_focus_nudge_button(-100))
-            focusControlsLayout.addWidget(make_focus_nudge_button(-10))
-            focusControlsLayout.addWidget(make_focus_nudge_button(-1))
-            focusControlsLayout.addWidget(make_focus_nudge_button(1))
-            focusControlsLayout.addWidget(make_focus_nudge_button(10))
             focusControlsLayout.addWidget(make_focus_nudge_button(100))
+            focusControlsLayout.addWidget(make_focus_nudge_button(500))
+            focusControlsLayout.addWidget(make_focus_nudge_button(1000))
             focusControlsWidget = QWidget()
             focusControlsWidget.setLayout(focusControlsLayout)
 

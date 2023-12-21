@@ -194,10 +194,14 @@ class ManualControlsWidget(QWidget):
         filterLabel = QLabel("Filter")
         filterLabel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.filterPicker: Optional[QComboBox] = None
+        filterResetButton: Optional[QPushButton] = None
         if filterControl:
             self.filterPicker = QComboBox()
             self.filterPicker.addItems(["Any filter", "No filter", "Red", "Orange", "Green", "Blue"])
             self.filterPicker.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            filterResetButton = QPushButton("Reset")
+            filterResetButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            filterResetButton.clicked.connect(self.resetFilterWheel)
 
         flashButton = QPushButton("Flash")
         flashButton.clicked.connect(partial(self.flash, FlashMode.FLASH_ONLY))
@@ -211,6 +215,8 @@ class ManualControlsWidget(QWidget):
         if self.filterPicker:
             ledStartButtonsLayout.addWidget(filterLabel)
             ledStartButtonsLayout.addWidget(self.filterPicker)
+            ledStartButtonsLayout.addWidget(filterResetButton)
+            self.startButtons.append(filterResetButton)
         ledStartButtonsWidget = QWidget()
         ledStartButtonsWidget.setLayout(ledStartButtonsLayout)
 
@@ -464,5 +470,12 @@ class ManualControlsWidget(QWidget):
     def disableHeater(self):
         self.halThread.runCommand({
             "command": "disable_heater",
+            "args": {}
+        })
+
+    @Slot(None)
+    def resetFilterWheel(self):
+        self.halThread.runCommand({
+            "command": "reset_filter_wheel",
             "args": {}
         })

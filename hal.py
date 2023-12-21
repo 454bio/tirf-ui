@@ -24,6 +24,9 @@ class IHal:
     
     def disable_heater(self, thread, tries=5):
         raise NotImplementedError
+    
+    def reset_filter_wheel(self, thread):
+        raise NotImplementedError
 
 class MockHal(IHal):
     def run_command(self, command: Dict, thread=None, tries=float("inf")) -> Dict:
@@ -46,6 +49,9 @@ class MockHal(IHal):
 
     def disable_heater(self, thread, tries=5):
         print("Mock HAL: disable_heater called")
+    
+    def reset_filter_wheel(self, thread):
+        print("Mock HAL: reset_filter_wheel called")
 
 @dataclass
 class Hal(IHal):
@@ -86,6 +92,12 @@ class Hal(IHal):
                 raise HalError(response["error_message"])
 
             return response["response"]
+
+    def reset_filter_wheel(self, thread):
+        self.run_command({
+            "command": "reset_filter_wheel",
+            "args": {}
+        }, thread)
 
     def disable_heater(self, thread, tries=5):
         for _ in range(tries):

@@ -73,6 +73,7 @@ class ProtocolThread(QThread):
                 with open(output_dir / "protocol.454sp.json", mode="w") as protocol_file:
                     json.dump(self.protocolJson, protocol_file)
                 # TODO: Set up logging
+                self.hal.reset_filter_wheel(self)
                 protocol.run(RunContext([RunContextNode(protocol)], output_dir, self.hal, RunState(), self))
             except Exception as e:
                 traceback.print_exc()
@@ -84,6 +85,7 @@ class ProtocolThread(QThread):
                     result = SequencingProtocolStatus.FAILED
             finally:
                 protocol.event_run_callback = None
+                self.hal.reset_filter_wheel(self)
                 self.finished.emit(result)
 
     def eventRunCallback(self, context: RunContext):

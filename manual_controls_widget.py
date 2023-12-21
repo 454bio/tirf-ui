@@ -34,22 +34,22 @@ class FlashMode(Enum):
     LIVE_PREVIEW = 2
 
 class HalThread(QThread):
-    def __init__(self, halAddress):
+    def __init__(self, halAddress, port):
         super().__init__()
         self.command: Optional[Dict] = None
 
         # Create the HAL iff there's a socket we can connect to.
         # Otherwise, run in mock mode.
-        if ip_utils.exists(halAddress, HAL_PORT):
-            self.hal = Hal(halAddress, HAL_PORT)
+        if ip_utils.exists(halAddress, port):
+            self.hal = Hal(halAddress, port)
         else:
             self.hal = MockHal()
 
     def runCommand(self, command: Dict):
-        self.command = command
         if self.isRunning():
             raise Exception("Command is still running")
 
+        self.command = command
         self.start()
 
     @Slot(None)
@@ -78,7 +78,8 @@ class ManualControlsWidget(QWidget):
     def __init__(self, halAddress, halMetadata):
         super().__init__()
 
-        self.halThread = HalThread(halAddress)
+        self.halThread = HalThread(halAddress, HAL_PORT)
+        self.halAdjustmentsThread = HalThread(halAddress, HAL_ADJUSTMENTS_PORT)
 
         # Whether we can control the filter programmatically.
         filterControl = False
@@ -231,7 +232,6 @@ class ManualControlsWidget(QWidget):
         # Focus controls.
         focusControlsWidget: Optional[QWidget] = None
         if focusControl:
-            self.halAdjustments = Hal(halAddress, HAL_ADJUSTMENTS_PORT)
             def make_focus_nudge_button(steps: int) -> QPushButton:
                 text = ("+" if steps > 0 else "") + str(steps)
                 button = QPushButton(text)
@@ -443,7 +443,7 @@ class ManualControlsWidget(QWidget):
 
     @Slot(None)
     def nudgeBaseFocus(self, steps: int):
-        self.halAdjustments.run_command({
+        self.halAdjustmentsThread.runCommand({
             "command": "nudge_base_focus",
             "args": {
                 "nudge_base_focus_args": {

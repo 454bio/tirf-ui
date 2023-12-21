@@ -104,6 +104,8 @@ class ManualControlsWidget(QWidget):
         self.stopButton = QPushButton("Cancel manual operation")
         self.stopButton.clicked.connect(self.halThread.requestInterruption)
 
+        self.adjustmentsButtons: List[QPushButton] = []
+
         # Generate the controls for each LED.
         # This cannot be rolled into the `for` loop below because Python's late-binding will result in the connections being crossed.
         def make_labeled_slider_controls(labelText: str, unitText: str, valueMax: int, defaultValue: int = 0, checkbox: bool = True) -> List[QWidget]:
@@ -236,8 +238,7 @@ class ManualControlsWidget(QWidget):
                 text = ("+" if steps > 0 else "") + str(steps)
                 button = QPushButton(text)
                 button.clicked.connect(partial(self.nudgeBaseFocus, steps))
-                # These go to a different API endpoint, so they don't need to be disabled when a command is running.
-                # self.startButtons.append(button)
+                self.adjustmentsButtons.append(button)
                 return button
 
             focusControlsLayout = QHBoxLayout()
@@ -312,11 +313,18 @@ class ManualControlsWidget(QWidget):
         self.halThread.finished.connect(partial(self.setStartButtonsEnabled, True))
         self.setStartButtonsEnabled(True)
 
-    def setStartButtonsEnabled(self, running: bool):
-        self.stopButton.setEnabled(not running)
+        self.halAdjustmentsThread.started.connect(partial(self.setAdjustmentsButtonsEnabled, False))
+        self.halAdjustmentsThread.finished.connect(partial(self.setAdjustmentsButtonsEnabled, True))
+
+    def setStartButtonsEnabled(self, enabled: bool):
+        self.stopButton.setEnabled(not enabled)
 
         for button in self.startButtons:
-            button.setEnabled(running)
+            button.setEnabled(enabled)
+
+    def setAdjustmentsButtonsEnabled(self, enabled: bool):
+        for button in self.adjustmentsButtons:
+            button.setEnabled(enabled)
 
     @Slot(None)
     def flash(self, flashMode: FlashMode):
